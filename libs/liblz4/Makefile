@@ -51,8 +51,8 @@ define Build/InstallDev
 endef
 
 define Package/liblz4/install
-	$(INSTALL_DIR) $(1)/usr/lib
-	$(CP) $(PKG_INSTALL_DIR)/usr/lib/liblz4.so* $(1)/usr/lib/
+	$(INSTALL_DIR) $(1)/opt/lib
+	$(CP) $(PKG_INSTALL_DIR)/opt/lib/liblz4.so* $(1)/opt/lib/
 endef
 
 $(eval $(call BuildPackage,liblz4))
