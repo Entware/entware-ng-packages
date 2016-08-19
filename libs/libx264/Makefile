@@ -25,7 +25,12 @@ PKG_INSTALL:=1
 include $(INCLUDE_DIR)/package.mk
 
 TARGET_CFLAGS:=-Wno-maybe-uninitialized -Wshadow -Wall -std=gnu99 -fPIC -O3 -ffast-math -I. 
-MAKE_FLAGS+= LD="$(TARGET_CC) -o" 
+MAKE_FLAGS+= LD="$(TARGET_CC) -o"
+
+ifeq ($(CONFIG_x86_64)$(CONFIG_i386),y)
+CONFIGURE_VARS+= AS=yasm
+MAKE_FLAGS+= AS=yasm
+endif
 
 CONFIGURE_ARGS += \
 		--enable-shared \
@@ -40,7 +45,7 @@ define Package/libx264
   SECTION:=libs
   CATEGORY:=Libraries
   TITLE:=H264/AVC free codec library.
-  DEPENDS:=@BUILD_PATENTED +libpthread
+  DEPENDS:=@BUILD_PATENTED +libpthread @!TARGET_armv5soft
   URL:=http://www.videolan.org/developers/x264.html
 endef
 

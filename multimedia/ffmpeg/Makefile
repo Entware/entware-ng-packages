@@ -323,7 +323,7 @@ endef
 define Package/libffmpeg-full
 $(call Package/libffmpeg/Default)
  TITLE+= (full)
- DEPENDS+= +alsa-lib +lame-lib +libopus +libspeex +libx264
+ DEPENDS+= +alsa-lib +lame-lib +libopus +libspeex +@!TARGET_armv5soft:libx264
  VARIANT:=full
 endef
 
@@ -422,8 +422,10 @@ ifeq ($(BUILD_VARIANT),full)
 	FFMPEG_CONFIGURE+= \
 		--enable-libopus --enable-decoder=libopus \
 		--enable-libspeex --enable-decoder=libspeex \
-		--enable-libmp3lame \
-		--enable-libx264
+		--enable-libmp3lame
+    ifneq ($(CONFIG_TARGET_armv5soft),y)
+	FFMPEG_CONFIGURE+= --enable-libx264
+    endif
 endif
 
 ifeq ($(BUILD_VARIANT),custom)
