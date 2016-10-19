@@ -13,7 +13,7 @@ endef
 
 define Build/Prepare
 	$(Build/Prepare/Default)
-	( cd $(PKG_BUILD_DIR)); $(STAGING_DIR)/host/opt/bin/phpize7 )
+	( cd $(PKG_BUILD_DIR); $(STAGING_DIR)/host/opt/bin/phpize7 )
 endef
 
 CONFIGURE_ARGS+= \
