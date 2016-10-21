@@ -8,14 +8,14 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=dump1090
-PKG_VERSION:=2016-06-16
+PKG_VERSION:=2016-10-02
 PKG_RELEASE:=1
 
 PKG_SOURCE_PROTO:=git
-PKG_SOURCE_URL:=git://github.com/mutability/dump1090.git
+PKG_SOURCE_URL:=https://github.com/mutability/dump1090.git
 PKG_SOURCE_SUBDIR:=$(PKG_NAME)-$(PKG_VERSION)
-PKG_SOURCE_VERSION:=dfe3d7af12d0d739a1164c71086d4b37f57886d9
-PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION)-$(PKG_SOURCE_VERSION).tar.gz
+PKG_SOURCE_VERSION:=344415b91f018e7fd3719fe639888505c54792ad
+PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION)-$(PKG_SOURCE_VERSION).tar.xz
 PKG_MAINTAINER:=Álvaro Fernández Rojas <noltari@gmail.com>
 
 PKG_LICENSE:=GPL-2.0
@@ -54,14 +54,12 @@ endef
 
 MAKE_FLAGS += \
 	CFLAGS="$(TARGET_CPPFLAGS)" \
-	UNAME=Linux
+	UNAME="Linux"
 
 define Package/dump1090/install
-	$(INSTALL_DIR) $(1)/opt/etc/init.d
-	$(INSTALL_DIR) $(1)/opt/etc/config
-	$(INSTALL_CONF) files/dump1090.config $(1)/opt/etc/config/dump1090
 	$(INSTALL_DIR) $(1)/opt/share/dump1090
 	$(CP) $(PKG_BUILD_DIR)/public_html/* $(1)/opt/share/dump1090
+	$(LN) /opt/var/run/dump1090 $(1)/opt/share/dump1090/data
 	$(INSTALL_DIR) $(1)/opt/bin
 	$(INSTALL_BIN) $(PKG_BUILD_DIR)/dump1090 $(1)/opt/bin
 endef
