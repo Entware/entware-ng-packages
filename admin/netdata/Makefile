@@ -8,17 +8,15 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=netdata
-PKG_VERSION:=1.2.0
-PKG_RELEASE:=1
-PKG_MAINTAINER:=Sebastian Careba <nitroshift@yahoo.com>
+PKG_VERSION:=1.4.0
+PKG_RELEASE:=2
+PKG_MAINTAINER:=Daniel Engberg <daniel.engberg.lists@pyret.net>
 PKG_LICENSE:=GPL-3.0
 PKG_LICENSE_FILES:=COPYING
 
-PKG_SOURCE_PROTO:=git
-PKG_SOURCE_URL:=https://github.com/firehol/netdata
-PKG_SOURCE_SUBDIR:=$(PKG_NAME)-$(PKG_VERSION)
-PKG_SOURCE_VERSION:=bb4aa949f5ac825253d8adc6070661299abc1c3b
-PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.gz
+PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.xz
+PKG_SOURCE_URL:=http://firehol.org/download/netdata/releases/v$(PKG_VERSION)
+PKG_SOURCE_VERSION:=3028b87ee19e8550df6b9decc49733d595e0bd6e
 
 PKG_INSTALL:=1
 PKG_FIXUP:=autoreconf
@@ -43,19 +41,28 @@ define Package/netdata/conffiles
 endef
 
 define Package/netdata/install
-	$(INSTALL_DIR) $(1)/etc/netdata
-	$(INSTALL_CONF) $(PKG_INSTALL_DIR)/etc/netdata/apps_groups.conf $(1)/etc/netdata
-	$(INSTALL_CONF) $(PKG_INSTALL_DIR)/etc/netdata/charts.d.conf $(1)/etc/netdata
-	$(INSTALL_CONF) ./files/netdata.conf $(1)/etc/netdata
-	$(INSTALL_DIR) $(1)/etc/init.d
-	$(INSTALL_BIN) ./files/netdata.init $(1)/etc/init.d/netdata
-	$(INSTALL_DIR) $(1)/usr/sbin
-	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/sbin/netdata $(1)/usr/sbin/
-	$(INSTALL_DIR) $(1)/usr/share/netdata
-	$(INSTALL_DIR) $(1)/usr/lib/netdata
+	mkdir -p $(1)/etc/netdata
+	$(CP) $(PKG_INSTALL_DIR)/etc/netdata $(1)/etc
+	$(CP) ./files/netdata.conf $(1)/etc/netdata
+	mkdir -p $(1)/usr/share/netdata
 	$(CP) $(PKG_INSTALL_DIR)/usr/share/netdata $(1)/usr/share
+	rm $(1)/usr/share/netdata/web/images/animated.gif
+	rm -rf $(1)/usr/share/netdata/web/old
+	rm $(1)/usr/share/netdata/web/demo*html
+	rm $(1)/usr/share/netdata/web/fonts/*.svg
+	rm $(1)/usr/share/netdata/web/fonts/*.ttf
+	rm $(1)/usr/share/netdata/web/fonts/*.woff
+	rm $(1)/usr/share/netdata/web/fonts/*.otf
+	mkdir -p $(1)/usr/lib/netdata
 	$(CP) $(PKG_INSTALL_DIR)/usr/lib/netdata $(1)/usr/lib
+	rm $(1)/usr/lib/netdata/python.d/python-modules-installer.sh
+	rm -rf $(1)/usr/lib/netdata/python.d/python_modules/pyyaml2
+	rm -rf $(1)/usr/lib/netdata/python.d/python_modules/pyyaml3
 	chmod 4755 $(1)/usr/lib/netdata/plugins.d/apps.plugin
+	mkdir -p $(1)/etc/init.d
+	$(INSTALL_BIN) ./files/netdata.init $(1)/etc/init.d/netdata
+	mkdir -p $(1)/usr/sbin
+	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/sbin/netdata $(1)/usr/sbin
 endef
 
 $(eval $(call BuildPackage,netdata))
