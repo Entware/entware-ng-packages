@@ -7,7 +7,7 @@
 -
 -VERSION_DATE=`echo $DATE | cut -f 1 -d ' ' | tr -d -`
 -VERSION_TIME=`echo $DATE | cut -f 2 -d ' ' | awk -F: '{printf "%d", $1$2}'`
-+VERSION_DATE=20141011
++VERSION_DATE=20160921
 +VERSION_TIME=1200
  
  echo "#define IRSSI_VERSION_DATE $VERSION_DATE"

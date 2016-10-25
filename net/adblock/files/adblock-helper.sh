@@ -6,6 +6,9 @@
 #
 LC_ALL=C
 PATH="/usr/sbin:/usr/bin:/sbin:/bin"
+adb_scriptver="1.5.2"
+adb_mincfgver="2.5"
+adb_hotplugif=""
 adb_lanif="lan"
 adb_nullport="65534"
 adb_nullportssl="65535"
@@ -21,6 +24,7 @@ adb_minspace=12000
 adb_forcedns=1
 adb_fetchttl=5
 adb_restricted=0
+adb_loglevel=1
 adb_uci="$(which uci)"
 
 # f_envload: load adblock environment
@@ -46,15 +50,6 @@ f_envload()
     else
         rc=-10
         f_log "system network library not found, please check your installation"
-        f_exit
-    fi
-
-    # check opkg availability
-    #
-    if [ -f "/var/lock/opkg.lock" ]
-    then
-        rc=-10
-        f_log "adblock installation finished successfully, 'opkg' currently locked by package installer"
         f_exit
     fi
 
@@ -121,7 +116,7 @@ f_envcheck()
     if [ -z "${adb_enabled}" ] || [ -z "${adb_cfgver}" ] || [ "${adb_cfgver%%.*}" != "${adb_mincfgver%%.*}" ]
     then
         rc=-1
-        f_log "outdated adblock config (${adb_mincfgver} vs. ${adb_cfgver}), please run '/etc/init.d/adblock cfgup' to update your configuration"
+        f_log "outdated adblock config (${adb_cfgver} vs. ${adb_mincfgver}), please run '/etc/init.d/adblock cfgup' to update your configuration"
         f_exit
     elif [ "${adb_cfgver#*.}" != "${adb_mincfgver#*.}" ]
     then
@@ -130,20 +125,25 @@ f_envcheck()
     if [ "${adb_enabled}" != "1" ]
     then
         rc=-10
-        f_log "adblock is currently disabled, please set adblock.global.adb_enabled=1' to use this service"
+        f_log "adblock is currently disabled, please set adb_enabled to '1' to use this service"
         f_exit
     fi
 
-    # get list with all installed packages
+    # check opkg availability
     #
-    pkg_list="$(opkg list-installed)"
-    if [ -z "${pkg_list}" ]
+    adb_pkglist="$(opkg list-installed)"
+    if [ $(($?)) -eq 255 ]
+    then
+        rc=-10
+        f_log "adblock installation finished successfully, 'opkg' currently locked by package installer"
+        f_exit
+    elif [ -z "${adb_pkglist}" ]
     then
         rc=-1
         f_log "empty 'opkg' package list, please check your installation"
         f_exit
     fi
-    adb_sysver="$(printf "${pkg_list}" | grep "^base-files -")"
+    adb_sysver="$(printf "${adb_pkglist}" | grep "^base-files -")"
     adb_sysver="${adb_sysver##*-}"
 
     # get lan ip addresses
@@ -168,21 +168,11 @@ f_envcheck()
     then
         adb_nullipv4="${adb_ipv4}"
         adb_nullipv6="${adb_ipv6}"
-        if [ -n "$(${adb_uci} -q get uhttpd.main.listen_http | grep -Fo "80")" ] ||
-           [ -n "$(${adb_uci} -q get uhttpd.main.listen_https | grep -Fo "443")" ]
+        if [ -n "$(${adb_uci} -q get uhttpd.main.listen_http | grep -o ":80$")" ] ||
+           [ -n "$(${adb_uci} -q get uhttpd.main.listen_https | grep -o ":443$")" ]
         then
             rc=-1
             f_log "AP mode detected, please set local LuCI instance to ports <> 80/443"
-            f_exit
-        elif [ -z "$(pgrep -f "dnsmasq")" ]
-        then
-            rc=-1
-            f_log "please enable the local dnsmasq instance to use adblock"
-            f_exit
-        elif [ ! -f "/var/run/fw3.state" ]
-        then
-            rc=-1
-            f_log "please enable the local firewall to use adblock"
             f_exit
         else
             apmode_ok="true"
@@ -203,23 +193,25 @@ f_envcheck()
 
     # check general package dependencies
     #
-    f_depend "busybox"
-    f_depend "uci"
-    f_depend "uhttpd"
-    f_depend "iptables"
-    f_depend "kmod-ipt-nat"
+    f_depend "busybox -"
+    f_depend "uci -"
+    f_depend "uhttpd -"
+    f_depend "iptables -"
+    f_depend "kmod-ipt-nat -"
+    f_depend "firewall -"
+    f_depend "dnsmasq*"
 
     # check ipv6 related package dependencies
     #
     if [ -n "${adb_wanif6}" ]
     then
-        f_depend "ip6tables" "true"
+        f_depend "ip6tables -" "true"
         if [ "${package_ok}" = "false" ]
         then
             f_log "package 'ip6tables' not found, IPv6 support will be disabled"
             unset adb_wanif6
         else
-            f_depend "kmod-ipt-nat6" "true"
+            f_depend "kmod-ipt-nat6 -" "true"
             if [ "${package_ok}" = "false" ]
             then
                 f_log "package 'kmod-ipt-nat6' not found, IPv6 support will be disabled"
@@ -230,13 +222,13 @@ f_envcheck()
 
     # check uclient-fetch/wget dependencies
     #
-    f_depend "uclient-fetch" "true"
+    f_depend "uclient-fetch -" "true"
     if [ "${package_ok}" = "true" ]
     then
-        f_depend "libustream-polarssl" "true"
+        f_depend "libustream-polarssl -" "true"
         if [ "${package_ok}" = "false" ]
         then
-            f_depend "libustream-\(mbedtls\|openssl\|cyassl\)" "true"
+            f_depend "libustream-\(mbedtls\|openssl\|cyassl\) -" "true"
             if [ "${package_ok}" = "true" ]
             then
                 adb_fetch="$(which uclient-fetch)"
@@ -247,7 +239,7 @@ f_envcheck()
     fi
     if [ -z "${adb_fetch}" ]
     then
-        f_depend "wget" "true"
+        f_depend "wget -" "true"
         if [ "${package_ok}" = "true" ]
         then
             adb_fetch="$(which wget)"
@@ -262,7 +254,7 @@ f_envcheck()
 
     # check ca-certificate package and set fetch parm accordingly
     #
-    f_depend "ca-certificates" "true"
+    f_depend "ca-certificates -" "true"
     if [ "${package_ok}" = "false" ]
     then
         fetch_parm="${fetch_parm} --no-check-certificate"
@@ -415,8 +407,8 @@ f_envcheck()
     #
     if [ -n "${adb_wanif4}" ] && [ -n "${adb_wanif6}" ]
     then
-        f_uhttpd "adbIPv4+6_80" "1" "-p ${adb_ipv4}:${adb_nullport} -p [${adb_ipv6}]:${adb_nullport}"
-        f_uhttpd "adbIPv4+6_443" "0" "-p ${adb_ipv4}:${adb_nullportssl} -p [${adb_ipv6}]:${adb_nullportssl}"
+        f_uhttpd "adbIPv46_80" "1" "-p ${adb_ipv4}:${adb_nullport} -p [${adb_ipv6}]:${adb_nullport}"
+        f_uhttpd "adbIPv46_443" "0" "-p ${adb_ipv4}:${adb_nullportssl} -p [${adb_ipv6}]:${adb_nullportssl}"
     elif [ -n "${adb_wanif4}" ]
     then
         f_uhttpd "adbIPv4_80" "1" "-p ${adb_ipv4}:${adb_nullport}"
@@ -439,7 +431,7 @@ f_envcheck()
 
     # remove temporary package list
     #
-    unset pkg_list
+    unset adb_pkglist
 }
 
 # f_depend: check package dependencies
@@ -451,7 +443,7 @@ f_depend()
     local check_only="${2}"
     package_ok="true"
 
-    check="$(printf "${pkg_list}" | grep "^${package} -")"
+    check="$(printf "${adb_pkglist}" | grep "^${package}")"
     if [ "${check_only}" = "true" ] && [ -z "${check}" ]
     then
         package_ok="false"
@@ -640,12 +632,10 @@ f_rmfirewall()
     rm_fw="$(iptables -w -t nat -vnL | grep -Fo "adb-")"
     if [ -n "${rm_fw}" ]
     then
-        iptables-save -t nat | grep -Fv -- "adb-" | iptables-restore
-        iptables-save -t filter | grep -Fv -- "adb-" | iptables-restore
+        iptables-save | grep -Fv -- "adb-" | iptables-restore
         if [ -n "$(lsmod | grep -Fo "ip6table_nat")" ]
         then
-            ip6tables-save -t nat | grep -Fv -- "adb-" | ip6tables-restore
-            ip6tables-save -t filter | grep -Fv -- "adb-" | ip6tables-restore
+            ip6tables-save | grep -Fv -- "adb-" | ip6tables-restore
         fi
     fi
 }
@@ -658,21 +648,19 @@ f_log()
     local log_msg="${1}"
     local class="info "
 
-    # check for terminal session
-    #
+    if [ $((rc)) -gt 0 ]
+    then
+        class="error"
+    elif [ $((rc)) -lt 0 ]
+    then
+        class="warn "
+    fi
     if [ -t 1 ]
     then
         log_parm="-s"
     fi
-
-    # log to different output devices and set log class accordingly
-    #
-    if [ -n "${log_msg}" ]
+    if [ -n "${log_msg}" ] && ([ $((adb_loglevel)) -gt 0 ] || [ "${class}" != "info " ])
     then
-        if [ $((rc)) -gt 0 ]
-        then
-            class="error"
-        fi
         logger ${log_parm} -t "adblock[${adb_pid}] ${class}" "${log_msg}" 2>&1
     fi
 }
@@ -686,7 +674,7 @@ f_statistics()
     if [ -n "${adb_wanif4}" ]
     then
         ipv4_blk="$(iptables -t nat -vxnL adb-nat | awk '$3 ~ /^DNAT$/ {sum += $1} END {printf sum}')"
-        ipv4_all="$(iptables -t nat -vxnL PREROUTING | awk '$3 ~ /^prerouting_rule$/ {sum += $1} END {printf sum}')"
+        ipv4_all="$(iptables -t nat -vxnL PREROUTING | awk '$3 ~ /^(delegate_prerouting|prerouting_rule)$/ {sum += $1} END {printf sum}')"
         if [ $((ipv4_all)) -gt 0 ] && [ $((ipv4_blk)) -gt 0 ] && [ $((ipv4_all)) -gt $((ipv4_blk)) ]
         then
             ipv4_pct="$(printf "${ipv4_blk}" | awk -v all="${ipv4_all}" '{printf( "%5.2f\n",$1/all*100)}')"
@@ -754,7 +742,10 @@ f_exit()
     else
         rc=0
     fi
-    "${adb_uci}" -q commit "adblock"
+    if [ -n "$("${adb_uci}" -q changes adblock)" ]
+    then
+        "${adb_uci}" -q commit "adblock"
+    fi
     rm -f "${adb_pidfile}"
     exit ${rc}
 }

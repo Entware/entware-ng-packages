@@ -8,12 +8,12 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=netatalk
-PKG_VERSION:=3.1.8
+PKG_VERSION:=3.1.10
 PKG_RELEASE:=1
 
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.bz2
 PKG_SOURCE_URL:=@SF/netatalk
-PKG_MD5SUM:=9cab934ca32b8979f389da52d44c69c2
+PKG_MD5SUM:=2b40161985bb32cff5660bf689a4704f15c33bb87565efc7805dd5c75ad1fcc7
 
 PKG_BUILD_PARALLEL:=1
 PKG_INSTALL:=1
@@ -28,7 +28,7 @@ define Package/netatalk
   DEPENDS:=+libevent2 +libdb47 +libgcrypt +libopenssl
   TITLE:=netatalk
   URL:=http://netatalk.sourceforge.net
-  MAINTAINER:=W. Michael Petullo <mike@flyn.org>
+  MAINTAINER:=Daniel Golle <daniel@makrotopia.org>
 endef
 
 define Package/netatalk/decription
@@ -38,7 +38,9 @@ define Package/netatalk/decription
 endef
 
 define Package/netatalk/conffiles
-/opt/etc/netatalk/afpd.conf
+/opt/etc/afp.conf
+/opt/etc/dbus-session.conf
+/opt/etc/extmap.conf
 endef
 
 CONFIGURE_ARGS += \
@@ -47,7 +49,7 @@ CONFIGURE_ARGS += \
 	--disable-debugging \
 	--disable-tcp-wrappers \
 	--disable-shell-check \
-	--without-mysql-config \
+	--with-mysql-config=false \
 	--with-cnid-default-backend=dbd \
 	--without-pam \
 	$(if $(CONFIG_SHADOW_PASSWORDS),--with-shadow,--without-shadow) \
@@ -57,6 +59,7 @@ CONFIGURE_ARGS += \
 	--with-bdb="$(STAGING_DIR)/opt/" \
 	--without-ldap \
 	--without-acls \
+	--without-kerberos \
 	--with-libevent-header="$(STAGING_DIR)/opt/include/event2" \
 	--with-libevent-lib="$(STAGING_DIR)/opt/lib" \
 	--with-lockfile=/opt/var/lock

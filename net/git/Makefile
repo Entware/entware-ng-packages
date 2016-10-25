@@ -8,12 +8,12 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=git
-PKG_VERSION:=2.8.2
-PKG_RELEASE:=2
+PKG_VERSION:=2.10.1
+PKG_RELEASE:=1
 
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.xz
 PKG_SOURCE_URL:=@KERNEL/software/scm/git/
-PKG_MD5SUM:=b8edb4ae34828fda6aa2a4478089b107
+PKG_MD5SUM:=a9e1bf842497fc3a23e86424018b3499
 
 PKG_INSTALL:=1
 PKG_BUILD_PARALLEL:=1
@@ -85,6 +85,7 @@ define Package/git/install
 	$(RM) $(PKG_INSTALL_DIR)/opt/bin/git-cvsserver
 	$(CP) $(PKG_INSTALL_DIR)/opt/bin/git-* $(1)/opt/bin
 	$(INSTALL_DIR) $(1)/opt/lib/git-core
+	$(LN) /opt/bin/git $(1)/opt/lib/git-core/git
 	( cd $(PKG_INSTALL_DIR); $(TAR) \
 		--exclude=opt/lib/git-core/git-http-backend \
 		--exclude=opt/lib/git-core/git-http-fetch \
@@ -95,7 +96,6 @@ define Package/git/install
 		-cf - \
 		opt/lib/git-core \
 	) | ( cd $(1); $(TAR) -xf - )
-	$(LN) /opt/bin/git $(1)/opt/lib/git-core/git
 	$(INSTALL_DIR) $(1)/opt/share/git-core/templates
 endef
 
