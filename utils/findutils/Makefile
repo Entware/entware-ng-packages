@@ -77,7 +77,7 @@ define Package/findutils-xargs/install
 endef
 
 define Package/findutils-locate/install
-	$(INSTALL_DIR) $(1)/opt/bin $(1)/srv/var
+	$(INSTALL_DIR) $(1)/opt/bin
 	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/opt/bin/locate $(1)/opt/bin/	
 	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/opt/bin/updatedb $(1)/opt/bin/	
 	$(CP) $(PKG_INSTALL_DIR)/opt/lib $(1)/opt/
