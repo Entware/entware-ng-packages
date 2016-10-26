@@ -12,7 +12,7 @@ PKG_VERSION:=1.3.0
 PKG_RELEASE:=1
 
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.gz
-PKG_SOURCE_URL:=http://matthewwild.co.uk/projects/luaexpat
+PKG_SOURCE_URL:=http://matthewwild.co.uk/projects/luaexpat/
 PKG_MD5SUM:=3c20b5795e7107f847f8da844fbfe2da
 
 include $(INCLUDE_DIR)/package.mk
