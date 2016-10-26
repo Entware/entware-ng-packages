@@ -8,12 +8,12 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=youtube-dl
-PKG_VERSION:=2016.07.11
+PKG_VERSION:=2016.09.19
 PKG_RELEASE:=1
 
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.gz
-PKG_SOURCE_URL:=http://youtube-dl.org/downloads/$(PKG_VERSION)/
-PKG_MD5SUM:=2175d314e9a2715bf724b8c683ee536f
+PKG_SOURCE_URL:=https://yt-dl.org/downloads/$(PKG_VERSION)/
+PKG_MD5SUM:=c760476f7950fb579c430e2db069fc8c
 PKG_BUILD_DIR:=$(BUILD_DIR)/$(PKG_NAME)
 
 PKG_LICENSE:=Unlicense
@@ -22,13 +22,12 @@ PKG_MAINTAINER:=Adrian Panella <ianchi74@outlook.com>
 
 
 include $(INCLUDE_DIR)/package.mk
-$(call include_mk, python-package.mk)
 
 define Package/youtube-dl
   SECTION:=multimedia
   CATEGORY:=Multimedia
   TITLE:=utility to download videos from YouTube.com
-  DEPENDS:=+python-openssl +python-email +python-xml +python-codecs +python-ctypes +ca-certificates +python-setuptools
+  DEPENDS:=+python-openssl +python-email +python-xml +python-codecs +python-ctypes +ca-certificates
   URL:=https://youtube-dl.org
 endef
 
@@ -38,17 +37,12 @@ define Package/youtube-dl/description
   It requires the Python interpreter.
 endef
 
-define Build/Compile
-	$(call Build/Compile/PyMod,,install --prefix="/opt" --root="$(PKG_INSTALL_DIR)")
-endef
-
 define Package/youtube-dl/install
-	$(INSTALL_DIR) $(1)$(PYTHON_PKG_DIR)
-	$(CP) \
-		$(PKG_INSTALL_DIR)$(PYTHON_PKG_DIR)/* \
-		$(1)$(PYTHON_PKG_DIR)
 	$(INSTALL_DIR) $(1)/opt/bin
-	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/opt/bin/youtube-dl $(1)/opt/bin
+	$(INSTALL_BIN) $(PKG_BUILD_DIR)/youtube-dl $(1)/opt/bin
+	$(SED) 's,/usr/bin/env python,/opt/bin/python,' \
+		$(1)/opt/bin/youtube-dl
+
 endef
 
 $(eval $(call BuildPackage,youtube-dl))
