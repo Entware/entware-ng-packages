@@ -34,9 +34,9 @@ CONFIGURE_ARGS+= \
 	--enable-propro
 
 define Build/InstallDev
-	mkdir -p $(STAGING_DIR)/usr/include/php7/ext/$(PECL_NAME)
-	$(CP) $(PKG_BUILD_DIR)/php_propro.h $(STAGING_DIR)/usr/include/php7/ext/$(PECL_NAME)/
-	$(CP) $(PKG_BUILD_DIR)/php_propro_api.h $(STAGING_DIR)/usr/include/php7/ext/$(PECL_NAME)/
+	mkdir -p $(STAGING_DIR)/opt/include/php7/ext/$(PECL_NAME)
+	$(CP) $(PKG_BUILD_DIR)/php_propro.h $(STAGING_DIR)/opt/include/php7/ext/$(PECL_NAME)/
+	$(CP) $(PKG_BUILD_DIR)/php_propro_api.h $(STAGING_DIR)/opt/include/php7/ext/$(PECL_NAME)/
 endef
 
 $(eval $(call PECLPackage,$(PECL_NAME),$(PECL_LONGNAME)))

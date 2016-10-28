@@ -34,9 +34,9 @@ CONFIGURE_ARGS+= \
 	--enable-raphf
 
 define Build/InstallDev
-	mkdir -p $(STAGING_DIR)/usr/include/php7/ext/$(PECL_NAME)
-	cp $(PKG_BUILD_DIR)/php_raphf.h $(STAGING_DIR)/usr/include/php7/ext/$(PECL_NAME)/
-	cp $(PKG_BUILD_DIR)/php_raphf_api.h $(STAGING_DIR)/usr/include/php7/ext/$(PECL_NAME)/
+	mkdir -p $(STAGING_DIR)/opt/include/php7/ext/$(PECL_NAME)
+	cp $(PKG_BUILD_DIR)/php_raphf.h $(STAGING_DIR)/opt/include/php7/ext/$(PECL_NAME)/
+	cp $(PKG_BUILD_DIR)/php_raphf_api.h $(STAGING_DIR)/opt/include/php7/ext/$(PECL_NAME)/
 endef
 
 $(eval $(call PECLPackage,$(PECL_NAME),$(PECL_LONGNAME)))

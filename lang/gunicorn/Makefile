@@ -35,19 +35,19 @@ define Package/gunicorn/description
 endef
 
 define Build/Compile
-	$(call Build/Compile/PyMod,,install --prefix=/usr --root=$(PKG_INSTALL_DIR))
+	$(call Build/Compile/PyMod,,install --prefix=/opt --root=$(PKG_INSTALL_DIR))
 endef
 
 define Package/gunicorn/install
 	$(INSTALL_DIR) $(1)$(PYTHON_PKG_DIR)
-	$(INSTALL_DIR) $(1)/usr/bin
+	$(INSTALL_DIR) $(1)/opt/bin
 	$(CP) \
 	    $(PKG_INSTALL_DIR)$(PYTHON_PKG_DIR)/* \
 	    $(1)$(PYTHON_PKG_DIR)
-	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/bin/gunicorn* \
-	    $(1)/usr/bin
+	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/opt/bin/gunicorn* \
+	    $(1)/opt/bin
 	# fix python exec path in scripts
-	$(SED) 's/#!.*/#!\/usr\/bin\/python/g' $(1)/usr/bin/gunicorn*
+	$(SED) 's/#!.*/#!\/opt\/bin\/python/g' $(1)/opt/bin/gunicorn*
 endef
 
 $(eval $(call BuildPackage,gunicorn))

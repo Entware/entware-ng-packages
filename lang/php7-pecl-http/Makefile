@@ -38,9 +38,9 @@ CONFIGURE_VARS+= \
 CONFIGURE_ARGS+= \
 	--with-http \
 	--without-http-shared-deps \
-	--with-http-libcurl-dir="$(STAGING_DIR)/usr" \
-	--with-http-libevent-dir="$(STAGING_DIR)/usr" \
-	--with-http-libidn-dir="$(STAGING_DIR)/usr"
+	--with-http-libcurl-dir="$(STAGING_DIR)/opt" \
+	--with-http-libevent-dir="$(STAGING_DIR)/opt" \
+	--with-http-libidn-dir="$(STAGING_DIR)/opt"
 
 $(eval $(call PECLPackage,http,$(PECL_LONGNAME),+libcurl +librt +libevent2 +libidn +php7-mod-iconv +php7-mod-session +php7-pecl-raphf +php7-pecl-propro,30))
 $(eval $(call BuildPackage,$(PKG_NAME)))

@@ -37,29 +37,30 @@ define Package/django/description
 endef
 
 define Build/Compile
-	$(call Build/Compile/PyMod,,install --prefix=/usr --root=$(PKG_INSTALL_DIR))
+	$(call Build/Compile/PyMod,,install --prefix=/opt --root=$(PKG_INSTALL_DIR))
 endef
 
 define Build/InstallDev
 	$(INSTALL_DIR) $(1)$(PYTHON_PKG_DIR)
-	$(INSTALL_DIR) $(1)/usr/bin
+	$(INSTALL_DIR) $(1)/opt/bin
 	$(CP) \
 	    $(PKG_INSTALL_DIR)$(PYTHON_PKG_DIR)/* \
 	    $(1)$(PYTHON_PKG_DIR)
-	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/bin/django-admin.py \
-	    $(1)/usr/bin
+	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/opt/bin/django-admin.py \
+	    $(1)/opt/bin
 endef
 
 define Package/django/install
 	$(INSTALL_DIR) $(1)$(PYTHON_PKG_DIR)
-	$(INSTALL_DIR) $(1)/usr/bin
+	$(INSTALL_DIR) $(1)/opt/bin
 	$(CP) \
 	    $(PKG_INSTALL_DIR)$(PYTHON_PKG_DIR)/* \
 	    $(1)$(PYTHON_PKG_DIR)
-	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/bin/django-admin.py \
-	    $(1)/usr/bin
-	# fix python exec path
-	sed -i 's/#!.*/#!\/usr\/bin\/python/g' $(1)/usr/bin/django-admin.py
+	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/opt/bin/django-admin.py \
+	    $(1)/opt/bin
+	# fix python exec path in scripts
+	find $(PKG_BUILD_DIR) -name *.py | xargs $(SED) 's|/usr/bin/env python|/opt/bin/python|'
+	sed -i 's/#!.*/#!\/opt\/bin\/python/g' $(1)/opt/bin/django-admin.py
 endef
 
 $(eval $(call BuildPackage,django))
