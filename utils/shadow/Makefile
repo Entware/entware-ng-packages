@@ -113,12 +113,12 @@ endef
 $(foreach u,$(SHADOW_APPLETS),$(eval $(call GenPlugin,$(u))))
 
 define Package/shadow-common/conffiles
-//opt/etc/login.defs
+/opt/etc/login.defs
 endef
 
 define Package/shadow-common/install
-	$(INSTALL_DIR) $(1)//opt/etc
-	$(INSTALL_CONF) $(PKG_INSTALL_DIR)//opt/etc/login.defs $(1)//opt/etc/
+	$(INSTALL_DIR) $(1)/opt/etc
+	$(INSTALL_CONF) $(PKG_INSTALL_DIR)/opt/etc/login.defs $(1)/opt/etc/
 endef
 
 define Package/shadow-utils/install
