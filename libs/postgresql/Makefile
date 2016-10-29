@@ -95,7 +95,6 @@ PGSQL_CLI_EXTRA_BIN := \
 
 PGSQL_CONFIG_VARS:= \
 	pgac_cv_snprintf_long_long_int_format="%lld" \
-	pgac_cv_snprintf_size_t_support=yes \
 	pgac_cv_snprintf_size_t_support=yes
 
 ifeq ($(CONFIG_USE_UCLIBC),y)
