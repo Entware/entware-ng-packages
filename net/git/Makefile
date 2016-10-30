@@ -81,7 +81,7 @@ endef
 
 define Package/git/install
 	$(INSTALL_DIR) $(1)/opt/bin
-	$(CP) $(PKG_INSTALL_DIR)/opt/bin/git   $(1)/opt/bin
+	$(CP) $(PKG_INSTALL_DIR)/opt/bin/git $(1)/opt/bin
 	$(RM) $(PKG_INSTALL_DIR)/opt/bin/git-cvsserver
 	$(CP) $(PKG_INSTALL_DIR)/opt/bin/git-* $(1)/opt/bin
 	$(INSTALL_DIR) $(1)/opt/lib/git-core

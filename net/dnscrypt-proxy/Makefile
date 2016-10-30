@@ -11,7 +11,7 @@ include $(TOPDIR)/rules.mk
 
 PKG_NAME:=dnscrypt-proxy
 PKG_VERSION:=1.7.0
-PKG_RELEASE:=0
+PKG_RELEASE:=1
 
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.gz
 PKG_SOURCE_URL:=http://download.dnscrypt.org/dnscrypt-proxy
@@ -92,6 +92,8 @@ MAKE_FLAGS += \
 define Package/dnscrypt-proxy/install
 	$(INSTALL_DIR) $(1)/opt/sbin
 	$(CP) $(PKG_INSTALL_DIR)/opt/sbin/dnscrypt-proxy $(1)/opt/sbin/
+	$(INSTALL_DIR) $(1)/opt/share/dnscrypt-proxy
+	$(CP) $(PKG_INSTALL_DIR)/opt/share/dnscrypt-proxy/dnscrypt-resolvers.csv $(1)/opt/share/dnscrypt-proxy/
 	$(INSTALL_DIR) $(1)/opt/etc/init.d
 	$(INSTALL_BIN) ./files/S09dnscrypt-proxy $(1)/opt/etc/init.d/
 endef
