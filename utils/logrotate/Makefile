@@ -24,6 +24,7 @@ define Package/logrotate
   DEPENDS:=+libpopt
   TITLE:=rotates, compresses, and mails system logs
   URL:=https://github.com/logrotate/logrotate
+  MAINTAINER:=Christian Beier <cb@shoutrlabs.com>
 endef
 
 define Package/logrotate/description
@@ -52,7 +53,7 @@ define Build/Compile
 	)
 endef
 
-define Package/logrotate/install	
+define Package/logrotate/install
 	$(INSTALL_DIR) $(1)/opt/sbin
 	$(INSTALL_BIN) $(PKG_BUILD_DIR)/logrotate $(1)/opt/sbin/
 	$(INSTALL_DIR) $(1)/opt/etc/logrotate.d

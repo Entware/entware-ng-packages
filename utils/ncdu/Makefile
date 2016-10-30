@@ -30,7 +30,7 @@ define Package/ncdu
   DEPENDS:=+libncurses
   TITLE:=ncurses disk usage viewer
   MAINTAINER:=Charles Lehner <celehner1@gmail.com>
-  URL:=http://dev.yorhel.nl/ncdu
+  URL:=https://dev.yorhel.nl/ncdu
 endef
 
 define Package/ncdu/description

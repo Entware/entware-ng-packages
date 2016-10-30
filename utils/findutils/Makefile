@@ -68,18 +68,18 @@ CONFIGURE_VARS += ac_cv_path_SORT=sort
 
 define Package/findutils-find/install
 	$(INSTALL_DIR) $(1)/opt/bin
-	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/opt/bin/find $(1)/opt/bin/	
+	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/opt/bin/find $(1)/opt/bin/
 endef
 
 define Package/findutils-xargs/install
 	$(INSTALL_DIR) $(1)/opt/bin
-	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/opt/bin/xargs $(1)/opt/bin/	
+	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/opt/bin/xargs $(1)/opt/bin/
 endef
 
 define Package/findutils-locate/install
-	$(INSTALL_DIR) $(1)/opt/bin
-	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/opt/bin/locate $(1)/opt/bin/	
-	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/opt/bin/updatedb $(1)/opt/bin/	
+	$(INSTALL_DIR) $(1)/opt/bin $(1)/opt/var
+	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/opt/bin/locate $(1)/opt/bin/
+	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/opt/bin/updatedb $(1)/opt/bin/
 	$(CP) $(PKG_INSTALL_DIR)/opt/lib $(1)/opt/
 endef
 
