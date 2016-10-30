@@ -12,7 +12,7 @@ PKG_VERSION:=1.3.0
 PKG_RELEASE:=1
 
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.gz
-PKG_SOURCE_URL:=http://matthewwild.co.uk/projects/luaexpat/
+PKG_SOURCE_URL:=http://matthewwild.co.uk/projects/luaexpat
 PKG_MD5SUM:=3c20b5795e7107f847f8da844fbfe2da
 
 include $(INCLUDE_DIR)/package.mk
@@ -22,7 +22,7 @@ define Package/luaexpat
   SECTION:=lang
   CATEGORY:=Languages
   TITLE:=LuaExpat 
-  URL:=http://www.keplerproject.org/luaexpat/
+  URL:=http://matthewwild.co.uk/projects/luaexpat/
   MAINTAINER:=W. Michael Petullo <mike@flyn.org>
   DEPENDS:=+lua +libexpat
 endef

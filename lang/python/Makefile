@@ -207,7 +207,7 @@ define PyPackage/python-base/install
 	$(LN) python$(PYTHON_VERSION) $(1)/opt/bin/python2
 	$(CP) $(PKG_INSTALL_DIR)/opt/lib/libpython$(PYTHON_VERSION).so* $(1)/opt/lib/
 	$(SED) "s|-L$(STAGING_DIR)/opt/lib|-L/opt/lib|g" $(1)/opt/lib/python$(PYTHON_VERSION)/_sysconfigdata.py
-	$(SED) "s|-L$(STAGING_DIR)/lib|-L/opt/lib/gcc/$(REAL_GNU_TARGET_NAME)/4.8.5|g" $(1)/opt/lib/python$(PYTHON_VERSION)/_sysconfigdata.py
+	$(SED) "s|-L$(STAGING_DIR)/lib|-L/opt/lib/gcc/$(REAL_GNU_TARGET_NAME)/5.4.0|g" $(1)/opt/lib/python$(PYTHON_VERSION)/_sysconfigdata.py
 	$(SED) "s|-L$(TOOLCHAIN_DIR)/usr/lib||g" $(1)/opt/lib/python$(PYTHON_VERSION)/_sysconfigdata.py
 	$(SED) "s|-L$(TOOLCHAIN_DIR)/lib||g" $(1)/opt/lib/python$(PYTHON_VERSION)/_sysconfigdata.py
 	$(SED) "s|-L$(PKG_BUILD_DIR)||g" $(1)/opt/lib/python$(PYTHON_VERSION)/_sysconfigdata.py
@@ -221,10 +221,6 @@ endef
 define PyPackage/python/filespec
 -|$(PYTHON_PKG_DIR)
 endef
-
-HOST_CFLAGS+= \
-	-I/usr/include/ncursesw \
-	-I/usr/include/ncurses
 
 HOST_CONFIGURE_ARGS+= \
 	--without-cxx-main \

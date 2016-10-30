@@ -47,6 +47,7 @@ define Package/chardet/install
 	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/opt/bin/chardetect \
 	    $(1)/opt/bin
 	# fix python exec path in scripts
+	find $(PKG_BUILD_DIR) -name *.py | xargs $(SED) 's|/usr/bin/env python|/opt/bin/python|'
 	sed -i 's/#!.*/#!\/opt\/bin\/python/g' $(1)/opt/bin/chardetect
 endef
 
