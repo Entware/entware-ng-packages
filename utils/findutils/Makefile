@@ -35,8 +35,8 @@ endef
 
 define Package/findutils
 	$(call Package/findutils/Default)
-	TITLE+= (find)
-	DEPENDS:=findutils-find
+	TITLE+= (metapackage)
+	DEPENDS:=+findutils-find +findutils-xargs
 endef
 
 define Package/findutils-find
@@ -46,7 +46,7 @@ endef
 
 define Package/findutils/description
 $(call Package/findutils/description/Default)
-This metapackage installs find utility
+This metapackage installs find and xargs utilities
 endef
 
 define Package/findutils-find/description
