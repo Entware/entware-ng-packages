@@ -35,33 +35,11 @@ endef
 
 define Package/findutils
 	$(call Package/findutils/Default)
-	TITLE+= (metapackage)
-	DEPENDS:=+findutils-find +findutils-xargs
-endef
-
-define Package/findutils-find
-	$(call Package/findutils/Default)
-	TITLE+= (find)
 endef
 
 define Package/findutils/description
 $(call Package/findutils/description/Default)
 This metapackage installs find and xargs utilities
-endef
-
-define Package/findutils-find/description
-$(call Package/findutils/description/Default)
-This package contains the find utility
-endef
-
-define Package/findutils-xargs
-	$(call Package/findutils/Default)
-	TITLE := (xargs)
-endef
-
-define Package/findutils-xargs/description
-$(call Package/findutils/description/Default)
-This package contains the xargs utility
 endef
 
 define Package/findutils-locate
@@ -78,28 +56,15 @@ CONFIGURE_ARGS += --localstatedir=/opt/var
 CONFIGURE_VARS += ac_cv_path_SORT=sort
 
 define Package/findutils/install
-	$(INSTALL_DIR) $(1)/opt/tmp
-	touch $(1)/opt/tmp/.findutils-placeholder
-endef
-
-define Package/findutils-find/install
 	$(INSTALL_DIR) $(1)/opt/bin
-	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/opt/bin/find $(1)/opt/bin/
-endef
-
-define Package/findutils-xargs/install
-	$(INSTALL_DIR) $(1)/opt/bin
-	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/opt/bin/xargs $(1)/opt/bin/
+	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/opt/bin/{find,xargs} $(1)/opt/bin/
 endef
 
 define Package/findutils-locate/install
 	$(INSTALL_DIR) $(1)/opt/bin $(1)/opt/var
-	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/opt/bin/locate $(1)/opt/bin/
-	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/opt/bin/updatedb $(1)/opt/bin/
+	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/opt/bin/{locate,updatedb} $(1)/opt/bin/
 	$(CP) $(PKG_INSTALL_DIR)/opt/lib $(1)/opt/
 endef
 
 $(eval $(call BuildPackage,findutils))
-$(eval $(call BuildPackage,findutils-find))
-$(eval $(call BuildPackage,findutils-xargs))
 $(eval $(call BuildPackage,findutils-locate))
