@@ -36,6 +36,10 @@ define Package/netdata/description
   monitoring for Linux systems, applications and SNMP devices over the web.
 endef
 
+ifeq ($(ARCH),mipsel)
+  TARGET_LDFLAGS := -lm
+endif
+
 define Package/netdata/conffiles
 /opt/etc/netdata/netdata.conf
 endef

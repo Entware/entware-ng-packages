@@ -1,0 +1,26 @@
+--- a/src/unit_test.c
++++ b/src/unit_test.c
+@@ -952,7 +952,11 @@
+     for(c = 0 ; c < max ; c++) {
+         calculated_number v = unpack_storage_number(rd->values[c]);
+         calculated_number n = test->results[c];
++#ifdef __UCLIBC__
++        int same = (llround(v * 10000000.0) == llround(n * 10000000.0))?1:0;
++#else
+         int same = (roundl(v * 10000000.0) == roundl(n * 10000000.0))?1:0;
++#endif
+         fprintf(stderr, "    %s/%s: checking position %lu (at %lu secs), expecting value " CALCULATED_NUMBER_FORMAT ", found " CALCULATED_NUMBER_FORMAT ", %s\n",
+             test->name, rd->name, c+1,
+             (rrdset_first_entry_t(st) + c * st->update_every) - time_start,
+@@ -963,7 +967,11 @@
+         if(rd2) {
+             v = unpack_storage_number(rd2->values[c]);
+             n = test->results2[c];
++#ifdef __UCLIBC__
++            same = (llround(v * 10000000.0) == llround(n * 10000000.0))?1:0;
++#else
+             same = (roundl(v * 10000000.0) == roundl(n * 10000000.0))?1:0;
++#endif
+             fprintf(stderr, "    %s/%s: checking position %lu (at %lu secs), expecting value " CALCULATED_NUMBER_FORMAT ", found " CALCULATED_NUMBER_FORMAT ", %s\n",
+                 test->name, rd2->name, c+1,
+                 (rrdset_first_entry_t(st) + c * st->update_every) - time_start,
