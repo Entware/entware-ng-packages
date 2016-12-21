@@ -44,25 +44,25 @@ CMAKE_OPTIONS += \
 
 define Build/InstallDev
 	$(INSTALL_DIR) \
-	  $(1)/usr/lib \
-	  $(1)/usr/include/double-conversion
+	  $(1)/opt/lib \
+	  $(1)/opt/include/double-conversion
 
 	$(CP) \
-	  $(PKG_INSTALL_DIR)/usr/include/* \
-	  $(1)/usr/include/
+	  $(PKG_INSTALL_DIR)/opt/include/* \
+	  $(1)/opt/include/
 
 	$(INSTALL_DATA) \
-	  $(PKG_INSTALL_DIR)/usr/lib/lib*.so* \
-	  $(1)/usr/lib/
+	  $(PKG_INSTALL_DIR)/opt/lib/lib*.so* \
+	  $(1)/opt/lib/
 endef
 
 define Package/libdouble-conversion/install
 	$(INSTALL_DIR) \
-	  $(1)/usr/lib
+	  $(1)/opt/lib
 
 	$(INSTALL_DATA) \
-	  $(PKG_INSTALL_DIR)/usr/lib/lib*.so* \
-	  $(1)/usr/lib/
+	  $(PKG_INSTALL_DIR)/opt/lib/lib*.so* \
+	  $(1)/opt/lib/
 endef
 
 $(eval $(call BuildPackage,libdouble-conversion))

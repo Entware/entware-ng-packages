@@ -1,5 +1,4 @@
 #!/bin/sh
-
 ENABLED=yes
 PROCS=php-fpm
 ARGS="--daemonize --fpm-config /opt/etc/php7-fpm.conf"

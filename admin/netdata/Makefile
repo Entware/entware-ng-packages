@@ -9,7 +9,7 @@ include $(TOPDIR)/rules.mk
 
 PKG_NAME:=netdata
 PKG_VERSION:=1.4.0
-PKG_RELEASE:=2
+PKG_RELEASE:=3
 PKG_MAINTAINER:=Daniel Engberg <daniel.engberg.lists@pyret.net>
 PKG_LICENSE:=GPL-3.0
 PKG_LICENSE_FILES:=COPYING
@@ -31,14 +31,14 @@ define Package/netdata
   URL:=http://netdata.firehol.org/
 endef
 
+ifeq ($(ARCH),mipsel)
+  TARGET_LDFLAGS := -lm
+endif
+
 define Package/netdata/description
   netdata is a highly optimized Linux daemon providing real-time performance
   monitoring for Linux systems, applications and SNMP devices over the web.
 endef
-
-ifeq ($(ARCH),mipsel)
-  TARGET_LDFLAGS := -lm
-endif
 
 define Package/netdata/conffiles
 /opt/etc/netdata/netdata.conf

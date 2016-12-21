@@ -42,14 +42,14 @@ CMAKE_OPTIONS += \
         -DCMAKE_BUILD_TYPE:STRING=MINSIZEREL
 
 define Build/InstallDev
-	$(INSTALL_DIR) $(1)/usr/{lib,include}
-	$(CP) $(PKG_INSTALL_DIR)/usr/include/* $(1)/usr/include/
-	$(CP) $(PKG_INSTALL_DIR)/usr/lib/libavro.{a,so*} $(1)/usr/lib/
+	$(INSTALL_DIR) $(1)/opt/{lib,include}
+	$(CP) $(PKG_INSTALL_DIR)/opt/include/* $(1)/opt/include/
+	$(CP) $(PKG_INSTALL_DIR)/opt/lib/libavro.{a,so*} $(1)/opt/lib/
 endef
 
 define Package/avro-c/install
-	$(INSTALL_DIR) $(1)/usr/lib
-	$(CP) $(PKG_INSTALL_DIR)/usr/lib/libavro.so* $(1)/usr/lib/
+	$(INSTALL_DIR) $(1)/opt/lib
+	$(CP) $(PKG_INSTALL_DIR)/opt/lib/libavro.so* $(1)/opt/lib/
 endef
 
 $(eval $(call BuildPackage,avro-c))

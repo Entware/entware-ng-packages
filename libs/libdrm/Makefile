@@ -45,25 +45,25 @@ CONFIGURE_ARGS += \
 
 define Build/InstallDev
 	$(INSTALL_DIR) \
-	  $(1)/usr/include \
-	  $(1)/usr/lib
+	  $(1)/opt/include \
+	  $(1)/opt/lib
 
 	$(CP) \
-	  $(PKG_INSTALL_DIR)/usr/include/* \
-	  $(1)/usr/include/
+	  $(PKG_INSTALL_DIR)/opt/include/* \
+	  $(1)/opt/include/
 
 	$(CP) \
-	  $(PKG_INSTALL_DIR)/usr/lib/{pkgconfig,*.so*} \
-	  $(1)/usr/lib/
+	  $(PKG_INSTALL_DIR)/opt/lib/{pkgconfig,*.so*} \
+	  $(1)/opt/lib/
 endef
 
 define Package/libdrm/install
 	$(INSTALL_DIR) \
-	  $(1)/usr/lib
+	  $(1)/opt/lib
 
 	$(CP) \
-	  $(PKG_INSTALL_DIR)/usr/lib/*.so* \
-	  $(1)/usr/lib/
+	  $(PKG_INSTALL_DIR)/opt/lib/*.so* \
+	  $(1)/opt/lib/
 endef
 
 $(eval $(call BuildPackage,libdrm))

@@ -38,24 +38,24 @@ define Package/libp11/description
   to make using PKCS#11 implementations easier.
 endef
 
-CONFIGURE_ARGS += --with-enginesdir=/usr/lib/engines
+CONFIGURE_ARGS += --with-enginesdir=/opt/lib/engines
 
 define Build/InstallDev
-	$(INSTALL_DIR) $(1)/usr/include/
-	$(CP) $(PKG_INSTALL_DIR)/usr/include/libp11.h $(1)/usr/include/
-	$(INSTALL_DIR) $(1)/usr/lib
-	$(CP) $(PKG_INSTALL_DIR)/usr/lib/libp11.{a,so} $(1)/usr/lib/
-	$(CP) $(PKG_INSTALL_DIR)/usr/lib/libp11.so* $(1)/usr/lib/
-	$(INSTALL_DIR) $(1)/usr/lib/pkgconfig/
-	$(CP) $(PKG_INSTALL_DIR)/usr/lib/pkgconfig/libp11.pc $(1)/usr/lib/pkgconfig/libp11.pc
+	$(INSTALL_DIR) $(1)/opt/include/
+	$(CP) $(PKG_INSTALL_DIR)/opt/include/libp11.h $(1)/opt/include/
+	$(INSTALL_DIR) $(1)/opt/lib
+	$(CP) $(PKG_INSTALL_DIR)/opt/lib/libp11.{a,so} $(1)/opt/lib/
+	$(CP) $(PKG_INSTALL_DIR)/opt/lib/libp11.so* $(1)/opt/lib/
+	$(INSTALL_DIR) $(1)/opt/lib/pkgconfig/
+	$(CP) $(PKG_INSTALL_DIR)/opt/lib/pkgconfig/libp11.pc $(1)/opt/lib/pkgconfig/libp11.pc
 endef
 
 define Package/libp11/install
-	$(INSTALL_DIR) $(1)/usr/lib/
-	$(CP) $(PKG_INSTALL_DIR)/usr/lib/libp11.so.* $(1)/usr/lib/
-	$(INSTALL_DIR) $(1)/usr/lib/engines
-	$(CP) $(PKG_INSTALL_DIR)/usr/lib/engines/*.so* $(1)/usr/lib/engines
-	$(LN) pkcs11.so $(1)/usr/lib/engines/libpkcs11.so
+	$(INSTALL_DIR) $(1)/opt/lib/
+	$(CP) $(PKG_INSTALL_DIR)/opt/lib/libp11.so.* $(1)/opt/lib/
+	$(INSTALL_DIR) $(1)/opt/lib/engines
+	$(CP) $(PKG_INSTALL_DIR)/opt/lib/engines/*.so* $(1)/opt/lib/engines
+	$(LN) pkcs11.so $(1)/opt/lib/engines/libpkcs11.so
 endef
 
 $(eval $(call BuildPackage,libp11))

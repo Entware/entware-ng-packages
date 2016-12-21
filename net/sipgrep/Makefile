@@ -36,12 +36,14 @@ define Package/sipgrep/description
   SipGrep is a utility for displaying and troubleshooting SIP signaling.
 endef
 
+TARGET_CFLAGS += -D_DEFAULT_SOURCE
+
 CONFIGURE_ARGS += \
 	--enable-ncurses
 
 define Package/sipgrep/install
-	$(INSTALL_DIR) $(1)/usr/sbin
-	$(INSTALL_BIN) $(PKG_BUILD_DIR)/src/sipgrep $(1)/usr/sbin/
+	$(INSTALL_DIR) $(1)/opt/sbin
+	$(INSTALL_BIN) $(PKG_BUILD_DIR)/src/sipgrep $(1)/opt/sbin/
 endef
 
 $(eval $(call BuildPackage,sipgrep))

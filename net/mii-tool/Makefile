@@ -46,8 +46,8 @@ define Build/Configure
 endef
 
 define Package/mii-tool/install
-	$(INSTALL_DIR) $(1)/usr/sbin
-	$(INSTALL_BIN) $(PKG_BUILD_DIR)/mii-tool $(1)/usr/sbin/
+	$(INSTALL_DIR) $(1)/opt/sbin
+	$(INSTALL_BIN) $(PKG_BUILD_DIR)/mii-tool $(1)/opt/sbin/
 endef
 
 $(eval $(call BuildPackage,mii-tool))

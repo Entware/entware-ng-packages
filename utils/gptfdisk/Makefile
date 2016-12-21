@@ -21,7 +21,7 @@ include $(INCLUDE_DIR)/package.mk
 define Package/gptfdisk/default
   SECTION:=utils
   CATEGORY:=Utilities
-  SUBMENU:=disc
+  SUBMENU:=Disc
   URL:=http://www.rodsbooks.com/gdisk
   MAINTAINER:=Daniel Engberg <daniel.engberg.lists@pyret.net>
 endef
@@ -68,18 +68,18 @@ in GPT, it cannot modify MBR partitions on its own.
 endef
 
 define Package/gdisk/install
-	$(INSTALL_DIR) $(1)/usr/sbin
-	$(INSTALL_BIN) $(PKG_BUILD_DIR)/gdisk $(1)/usr/sbin
+	$(INSTALL_DIR) $(1)/opt/sbin
+	$(INSTALL_BIN) $(PKG_BUILD_DIR)/gdisk $(1)/opt/sbin
 endef
 
 define Package/sgdisk/install
-	$(INSTALL_DIR) $(1)/usr/sbin
-	$(INSTALL_BIN) $(PKG_BUILD_DIR)/sgdisk $(1)/usr/sbin
+	$(INSTALL_DIR) $(1)/opt/sbin
+	$(INSTALL_BIN) $(PKG_BUILD_DIR)/sgdisk $(1)/opt/sbin
 endef
 
 define Package/cgdisk/install
-	$(INSTALL_DIR) $(1)/usr/sbin
-	$(INSTALL_BIN) $(PKG_BUILD_DIR)/cgdisk $(1)/usr/sbin
+	$(INSTALL_DIR) $(1)/opt/sbin
+	$(INSTALL_BIN) $(PKG_BUILD_DIR)/cgdisk $(1)/opt/sbin
 endef
 
 $(eval $(call BuildPackage,gdisk))
