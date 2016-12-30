@@ -9,7 +9,7 @@ include $(TOPDIR)/rules.mk
 
 PKG_NAME:=netdata
 PKG_VERSION:=1.4.0
-PKG_RELEASE:=3
+PKG_RELEASE:=3a
 PKG_MAINTAINER:=Daniel Engberg <daniel.engberg.lists@pyret.net>
 PKG_LICENSE:=GPL-3.0
 PKG_LICENSE_FILES:=COPYING
@@ -32,7 +32,7 @@ define Package/netdata
 endef
 
 ifeq ($(ARCH),mipsel)
-  TARGET_LDFLAGS := -lm
+  TARGET_LDFLAGS += -lm
 endif
 
 define Package/netdata/description
