@@ -38,11 +38,11 @@ DEPENDS_timeout = +librt
 DEPENDS_expr = +libgmp
 DEPENDS_factor = +libgmp
 DEPENDS_cp = +libacl
-DEPENDS_dir = +libacl
+DEPENDS_dir = +libacl +libcap
 DEPENDS_install = +libacl
-DEPENDS_ls = +libacl
+DEPENDS_ls = +libacl +libcap
 DEPENDS_mv = +libacl
-DEPENDS_vdir = +libacl
+DEPENDS_vdir = +libacl +libcap
 
 define Package/coreutils/Default
   SECTION:=utils
