@@ -5,7 +5,7 @@
 # See /LICENSE for more information.
 #
 # perl-dev package (with headers only) for native perl modules building added at the end of Makefile
-#
+
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=perl
@@ -100,7 +100,7 @@ define Build/Configure
 	                                -Dowrt:cflags='$(TARGET_CFLAGS_PERL) $(TARGET_CPPFLAGS_PERL)' \
 	                                -Dowrt:ldflags='-rdynamic $(TARGET_LDFLAGS)' \
 	                                -Dowrt:libc=$(subst uClibc,uclibc,$(CONFIG_LIBC)) \
-	                                -Dowrt:ipv6='define' \
+	                                -Dowrt:ipv6=$(if $($(CONFIG_IPV6)),define,undef) \
 	                                -Dowrt:threads=$(if $(CONFIG_PERL_THREADS),yes,no) \
 	                                -Dowrt:staging_dir='$(STAGING_DIR)' \
 	                                -Dowrt:host_perl_prefix='$(HOST_PERL_PREFIX)' \

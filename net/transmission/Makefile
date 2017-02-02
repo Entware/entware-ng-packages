@@ -4,6 +4,7 @@
 # This is free software, licensed under the GNU General Public License v2.
 # See /LICENSE for more information.
 #
+# additional script-torrent-added feature
 
 include $(TOPDIR)/rules.mk
 
@@ -169,7 +170,7 @@ define Package/transmission-daemon-openssl/install
 	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/opt/bin/transmission-daemon $(1)/opt/bin/
 	$(INSTALL_DIR) $(1)/opt/etc/init.d/
 	$(INSTALL_BIN) files/S88transmission $(1)/opt/etc/init.d/
-	$(INSTALL_DIR) $(1)/opt/etc/transmission $(1)/opt/etc/transmission/blocklists $(1)/opt/etc/transmission/resume $(1)/opt/etc/transmission/torrents $(1)/opt/etc/transmission/watchdir
+	$(INSTALL_DIR) $(1)/opt/etc/transmission/{blocklists,resume,torrents,watchdir}
 	$(INSTALL_CONF) files/settings.json $(1)/opt/etc/transmission
 endef
 Package/transmission-daemon-mbedtls/install = $(Package/transmission-daemon-openssl/install)

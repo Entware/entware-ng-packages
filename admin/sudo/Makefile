@@ -43,8 +43,6 @@ define Package/sudo/conffiles
 /opt/etc/sudoers.d/
 endef
 
-TARGET_LDFLAGS += -lssp
-
 CONFIGURE_ARGS+= \
 	--without-pam \
 	--disable-pam-session \

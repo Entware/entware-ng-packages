@@ -229,9 +229,9 @@ define Package/snmp-utils/install
 	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/opt/bin/snmp{get,set,status,test,trap,walk} $(1)/opt/bin/
 endef
 
-define Package/snmpd/conffiles
-/opt/etc/config/snmpd
-endef
+#define Package/snmpd/conffiles
+#/opt/etc/config/snmpd
+#endef
 
 define Package/snmpd/install
 	$(INSTALL_DIR) $(1)/opt/etc/snmp

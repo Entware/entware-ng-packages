@@ -4,7 +4,7 @@
 # This is free software, licensed under the GNU General Public License v2.
 # See /LICENSE for more information.
 #
-# Downgraded to r181 - the last one working with kernel 2.6.22
+# Downgraded from r182 - the last one working with kernel 2.6.22
 
 include $(TOPDIR)/rules.mk
 

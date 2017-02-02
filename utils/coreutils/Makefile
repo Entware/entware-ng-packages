@@ -4,7 +4,7 @@
 # This is free software, licensed under the GNU General Public License v2.
 # See /LICENSE for more information.
 #
-# restored df - all normal firmwares have /etc/mtab needed for coreutils-df to work!
+# df binary restored
 
 include $(TOPDIR)/rules.mk
 

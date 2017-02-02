@@ -172,7 +172,7 @@ define Build/Compile
 		target_alias="$(GNU_TARGET_NAME)"	\
 		build_alias="$(GNU_HOST_NAME)"		\
 		all
-		$(MAKE) -C $(PKG_BUILD_DIR)		\
+	$(MAKE) -C $(PKG_BUILD_DIR)			\
 		DESTDIR="$(PKG_INSTALL_DIR)"		\
 		BUILD_CC="$(HOSTCC_NOCACHE)"		\
 		CROSS_CC="$(TARGET_CC)"			\

@@ -4,8 +4,7 @@
 # This is free software, licensed under the GNU General Public License v2.
 # See /LICENSE for more information.
 #
-# new versions fail to build on intel in entware-ng
-# entware-3x is not affected
+# Downgraded from 3.3. The newer versions fail to build on intel
 
 include $(TOPDIR)/rules.mk
 

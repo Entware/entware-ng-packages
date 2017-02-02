@@ -25,7 +25,7 @@ include $(INCLUDE_DIR)/package.mk
 include $(INCLUDE_DIR)/scons.mk
 
 define Package/gpsd/Default
-  DEPENDS:=+libusb-1.0
+  DEPENDS:= +libusb-1.0
   URL:=http://catb.org/gpsd/
 endef
 

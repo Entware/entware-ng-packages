@@ -5,7 +5,7 @@
 # This is free software, licensed under the GNU General Public License v2.
 # See /LICENSE for more information.
 #
-# Downgraded to 0.8.6 - the last one working on kernel 2.6.22
+# Downgraded from 1.10.0. This is the last working relase on kernel 2.6.22
 
 include $(TOPDIR)/rules.mk
 
