@@ -2,6 +2,7 @@
 # This is free software, licensed under the GNU General Public License v2.
 # See /LICENSE for more information.
 #
+# Entware: no uclibc++
 
 include $(TOPDIR)/rules.mk
 
@@ -19,14 +20,13 @@ PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.xz
 PKG_MIRROR_MD5SUM:=c8c3219c995a59161832d580a194f6280de7a4eef75cebece6f38400b64f003e
 PKG_BUILD_DIR:=$(BUILD_DIR)/$(PKG_SOURCE_SUBDIR)
 
-PKG_BUILD_DEPENDS:=uclibcxx
 PKG_BUILD_PARALLEL:=1
 include $(INCLUDE_DIR)/package.mk
 
 define Package/zerotier
   SECTION:=net
   CATEGORY:=Network
-  DEPENDS:=+libpthread +ZEROTIER_ENABLE_NETWORK_CONTROLLER:libsqlite3 +ZEROTIER_USE_MINIUPNPC:libminiupnpc +ZEROTIER_USE_MINIUPNPC:libnatpmp
+  DEPENDS:=+libpthread +libstdcpp +ZEROTIER_ENABLE_NETWORK_CONTROLLER:libsqlite3 +ZEROTIER_USE_MINIUPNPC:libminiupnpc +ZEROTIER_USE_MINIUPNPC:libnatpmp
   TITLE:=Create flat virtual Ethernet networks of almost unlimited size
   URL:=https://www.zerotier.com
   SUBMENU:=VPN
@@ -54,11 +54,11 @@ ifeq ($(CONFIG_ZEROTIER_ENABLE_DEBUG),y)
 TARGET_CXXFLAGS += -DZT_TRACE -ggdb3
 endif
 
-MAKE_FLAGS += \
-	DEFS="" \
-	LDFLAGS+=" -L$(STAGING_DIR)/opt/lib/uClibc++ -pthread " \
-	LDLIBS+=" -fno-builtin -nodefaultlibs -Wl,-Bstatic -luClibc++ -Wl,-Bdynamic -lpthread -lm -lc -lsupc++ -lc -lgcc -lgcc_eh -lgcc_s -lssp_nonshared " \
-	CXXFLAGS+=" -fno-builtin -nostdinc++ -I$(STAGING_DIR)/opt/include/uClibc++ -DGCC_HASCLASSVISIBILITY -Wall -fPIE -fvisibility=hidden "
+#MAKE_FLAGS += \
+#	DEFS="" \
+#	LDFLAGS+=" -pthread " \
+#	LDLIBS+=" -fno-builtin -nodefaultlibs -Wl,-Bstatic -Wl,-Bdynamic -lpthread -lm -lc -lsupc++ -lc -lgcc -lgcc_eh -lgcc_s -lssp_nonshared " \
+#	CXXFLAGS+=" -fno-builtin -nostdinc++ -DGCC_HASCLASSVISIBILITY -Wall -fPIE -fvisibility=hidden "
 
 define Build/Compile
 	$(call Build/Compile/Default,one)
