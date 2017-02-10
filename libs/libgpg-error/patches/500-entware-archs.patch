@@ -1,6 +1,6 @@
 --- a/src/mkheader.c
 +++ b/src/mkheader.c
-@@ -75,14 +75,16 @@
+@@ -75,14 +75,17 @@
      const char *name;
      const char *alias;
    } tbl[] = {
@@ -16,7 +16,8 @@
      {"powerpc-unknown-linux-gnuspe", "powerpc-unknown-linux-gnu" },
 +    {"arm-openwrt-linux-gnu", "arm-unknown-linux-gnueabi"},
 +    {"mipsel-openwrt-linux-gnu", "mipsel-unknown-linux-gnu"},
- 
++    {"mips-openwrt-linux-gnu", "mips-unknown-linux-gnu"},
+
      { NULL }
    };
 
