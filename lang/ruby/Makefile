@@ -170,7 +170,7 @@ define Package/ruby/install
 	$(INSTALL_DIR) $(1)/opt/lib/ruby/site_ruby/$(PKG_ABI_VERSION)
 	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/opt/bin/ruby $(1)/opt/lib/ruby/ruby$(PKG_ABI_VERSION)-bin
 	#$(INSTALL_BIN) ./files/ruby $(1)/opt/bin/ruby
-	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/opt/bin/ruby $(1)/opt/lib/ruby/ruby$(PKG_ABI_VERSION)-bin
+	$(LN) /opt/lib/ruby/ruby$(PKG_ABI_VERSION)-bin $(1)/opt/bin/ruby
 	$(CP) $(PKG_INSTALL_DIR)/opt/lib/ruby/vendor_ruby/$(PKG_ABI_VERSION)/* $(1)/opt/lib/ruby/vendor_ruby/$(PKG_ABI_VERSION)/
 	$(CP) $(PKG_INSTALL_DIR)/opt/lib/ruby/site_ruby/$(PKG_ABI_VERSION)/* $(1)/opt/lib/ruby/site_ruby/$(PKG_ABI_VERSION)/
 	#$(SED) "s%@RUBY_LIBPATH@%/opt/lib/ruby/$(PKG_ABI_VERSION)%" $(1)/opt/bin/ruby
