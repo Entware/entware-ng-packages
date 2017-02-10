@@ -29,8 +29,8 @@ define Build/Compile
 endef
 
 define Package/io/install
-	$(INSTALL_DIR) $(1)/usr/bin
-	$(INSTALL_BIN) $(PKG_BUILD_DIR)/io $(1)/usr/bin/
+	$(INSTALL_DIR) $(1)/opt/bin
+	$(INSTALL_BIN) $(PKG_BUILD_DIR)/io $(1)/opt/bin/
 endef
 
 $(eval $(call BuildPackage,io))
