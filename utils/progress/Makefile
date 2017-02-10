@@ -47,8 +47,8 @@ define Package/progress/description
 endef
 
 define Package/progress/install
-	$(INSTALL_DIR) $(1)/usr/bin
-	$(INSTALL_BIN) $(PKG_BUILD_DIR)/progress $(1)/usr/bin/
+	$(INSTALL_DIR) $(1)/opt/bin
+	$(INSTALL_BIN) $(PKG_BUILD_DIR)/progress $(1)/opt/bin/
 endef
 
 $(eval $(call BuildPackage,progress))
