@@ -9,7 +9,7 @@ include $(TOPDIR)/rules.mk
 
 PKG_NAME:=autoconf
 PKG_VERSION:=2.69
-PKG_RELEASE:=2
+PKG_RELEASE:=2a
 
 PKG_SOURCE_URL:=@GNU/autoconf
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.xz
