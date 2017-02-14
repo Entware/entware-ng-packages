@@ -6,7 +6,7 @@ diff -Naur src.orig/connections.c src/connections.c
  
  #include "sys-socket.h"
  
-+#ifdef __UCLIBC__
++#if 1 /*def __UCLIBC__*/
 +    #undef SOCK_CLOEXEC
 +#endif
 +
@@ -21,7 +21,7 @@ diff -Naur src.orig/fdevent.c src/fdevent.c
  #include <fcntl.h>
  #include <assert.h>
  
-+#ifdef __UCLIBC__
++#if 1 /*def __UCLIBC__*/
 +    #undef SOCK_CLOEXEC
 +#endif
 +
@@ -35,7 +35,7 @@ diff -Naur src.orig/mod_fastcgi.c src/mod_fastcgi.c
  #include <sys/wait.h>
  #endif
  
-+#ifdef __UCLIBC__
++#if 1 /*def __UCLIBC__*/
 +    #undef SOCK_CLOEXEC
 +#endif
 +
@@ -49,7 +49,7 @@ diff -Naur src.orig/mod_scgi.c src/mod_scgi.c
  # include <sys/wait.h>
  #endif
  
-+#ifdef __UCLIBC__
++#if 1 /*def __UCLIBC__*/
 +    #undef SOCK_CLOEXEC
 +#endif
 +
