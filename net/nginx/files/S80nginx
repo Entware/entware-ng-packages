@@ -15,7 +15,7 @@ case $1 in
 	reload)
 	nginx -s reload && echo 'Nginx configuration reload.'
 	;;
-	reload)
+	reopen)
 	nginx -s reopen && echo 'Nginx log files reopened.'
 	;;
 	test)
