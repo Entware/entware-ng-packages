@@ -4,12 +4,13 @@
 # This is free software, licensed under the GNU General Public License v2.
 # See /LICENSE for more information.
 #
+# Openssl support enabled and more binaries added to snmp-utils
 
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=net-snmp
 PKG_VERSION:=5.7.3
-PKG_RELEASE:=2
+PKG_RELEASE:=2a
 
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.gz
 PKG_SOURCE_URL:=@SF/net-snmp
@@ -40,7 +41,7 @@ define Package/libnetsnmp
 $(call Package/net-snmp/Default)
   SECTION:=libs
   CATEGORY:=Libraries
-#  DEPENDS:=+libnl-tiny
+  DEPENDS:=+libopenssl
   TITLE:=Open source SNMP implementation (libraries)
 endef
 
@@ -180,7 +181,6 @@ CONFIGURE_ARGS += \
 	--with-mib-modules="$(SNMP_MIB_MODULES_INCLUDED)" \
 	--with-out-transports="$(SNMP_TRANSPORTS_EXCLUDED)" \
 	--with-transports="$(SNMP_TRANSPORTS_INCLUDED)" \
-	--without-openssl \
 	--without-libwrap \
 	--without-rpm \
 	--without-zlib \
@@ -226,7 +226,7 @@ endef
 
 define Package/snmp-utils/install
 	$(INSTALL_DIR) $(1)/opt/bin
-	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/opt/bin/snmp{get,set,status,test,trap,walk} $(1)/opt/bin/
+	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/opt/bin/snmp{bulkget,bulkwalk,delta,df,get,getnext,netstat,set,status,table,test,trap,translate,usm,vacm,walk} $(1)/opt/bin/
 endef
 
 #define Package/snmpd/conffiles
