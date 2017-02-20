@@ -118,6 +118,14 @@ define Package/tor/install
 	$(INSTALL_BIN) ./files/S35tor $(1)/opt/etc/init.d
 	$(INSTALL_DIR) $(1)/opt/etc/tor
 	$(INSTALL_CONF) $(PKG_INSTALL_DIR)/opt/etc/tor/torrc.sample $(1)/opt/etc/tor/torrc
+	$(INSTALL_DIR) $(1)/opt/var/log/tor
+endef
+
+define Package/tor/postinst
+	#!/bin/sh
+	chown -R tor:tor /opt/var/lib/tor
+	chown -R tor:tor /opt/var/log/tor
+	chown -R tor:tor /opt/etc/tor
 endef
 
 define Package/tor-gencert/install
@@ -134,6 +142,11 @@ define Package/tor-geoip/install
 	$(INSTALL_DIR) $(1)/opt/share/tor
 	$(CP) $(PKG_INSTALL_DIR)/opt/share/tor/geoip $(1)/opt/share/tor/
 	$(CP) $(PKG_INSTALL_DIR)/opt/share/tor/geoip6 $(1)/opt/share/tor/
+endef
+
+define Package/tor-geoip/postinst
+        #!/bin/sh
+	chown -R tor:tor /opt/share/tor
 endef
 
 $(eval $(call BuildPackage,tor))
