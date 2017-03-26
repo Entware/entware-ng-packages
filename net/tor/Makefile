@@ -8,13 +8,13 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=tor
-PKG_VERSION:=0.2.9.8
+PKG_VERSION:=0.2.9.9
 PKG_RELEASE:=1
 
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.gz
 PKG_SOURCE_URL:=https://dist.torproject.org/ \
 	https://archive.torproject.org/tor-package-archive
-PKG_MD5SUM:=fbdd33d3384574297b88744622382008d1e0f9ddd300d330746c464b7a7d746a
+PKG_MD5SUM:=33325d2b250fd047ba2ddc5d11c2190c4e2951f4b03ec48ebd8bf0666e990d43
 PKG_MAINTAINER:=Hauke Mehrtens <hauke@hauke-m.de>
 PKG_LICENSE_FILES:=LICENSE
 
@@ -82,9 +82,9 @@ $(call Package/tor/Default/description)
 endef
 
 define Package/tor/conffiles
-/opt/etc/tor/torrc
-/opt/var/lib/tor/fingerprint
-/opt/var/lib/tor/keys/*
+	/opt/etc/tor/torrc
+	/opt/var/lib/tor/fingerprint
+	/opt/var/lib/tor/keys/*
 endef
 
 CONFIGURE_ARGS += \
@@ -118,6 +118,14 @@ define Package/tor/install
 	$(INSTALL_BIN) ./files/S35tor $(1)/opt/etc/init.d
 	$(INSTALL_DIR) $(1)/opt/etc/tor
 	$(INSTALL_CONF) $(PKG_INSTALL_DIR)/opt/etc/tor/torrc.sample $(1)/opt/etc/tor/torrc
+	$(INSTALL_DIR) $(1)/opt/var/log/tor
+endef
+
+define Package/tor/postinst
+	#!/bin/sh
+	chown -R tor:tor /opt/var/lib/tor
+	chown -R tor:tor /opt/var/log/tor
+	chown -R tor:tor /opt/etc/tor
 endef
 
 define Package/tor-gencert/install
@@ -134,6 +142,11 @@ define Package/tor-geoip/install
 	$(INSTALL_DIR) $(1)/opt/share/tor
 	$(CP) $(PKG_INSTALL_DIR)/opt/share/tor/geoip $(1)/opt/share/tor/
 	$(CP) $(PKG_INSTALL_DIR)/opt/share/tor/geoip6 $(1)/opt/share/tor/
+endef
+
+define Package/tor-geoip/postinst
+        #!/bin/sh
+	chown -R tor:tor /opt/share/tor
 endef
 
 $(eval $(call BuildPackage,tor))
