@@ -47,8 +47,8 @@ CONFIGURE_VARS += \
 	ac_cv_file__proc_meminfo=yes
 
 define Package/htop/install
-	$(INSTALL_DIR) $(1)/usr/bin
-	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/bin/$(PKG_NAME) $(1)/usr/bin/
+	$(INSTALL_DIR) $(1)/opt/bin
+	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/opt/bin/$(PKG_NAME) $(1)/opt/bin/
 endef
 
 $(eval $(call BuildPackage,htop))
