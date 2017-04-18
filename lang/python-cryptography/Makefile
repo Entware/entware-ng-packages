@@ -9,13 +9,13 @@ include $(TOPDIR)/rules.mk
 
 PKG_NAME:=cryptography
 PKG_VERSION:=1.5.1
-PKG_RELEASE:=1
+PKG_RELEASE:=2
 
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.gz
 PKG_SOURCE_URL:=https://pypi.python.org/packages/21/e1/37fc14f9d77924e84ba0dcb88eb8352db914583af229287c6c965d66ba0d
 PKG_MD5SUM:=66a3e01f5f436d2413ef47b7e6bb7729
 
-PKG_BUILD_DEPENDS:=python-cffi/host
+PKG_BUILD_DEPENDS:=python-cffi/host 
 
 PKG_LICENSE:=Apache-2.0 BSD-3-Clause
 PKG_LICENSE_FILES:=LICENSE.APACHE LICENSE.BSD

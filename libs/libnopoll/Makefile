@@ -40,19 +40,21 @@ define Package/libnopoll/description
   This package contains the noPoll C WebSocket library.
 endef
 
+TARGET_LDFLAGS += -lpthread
+
 CONFIGURE_ARGS += \
 	--enable-nopoll-log=no \
 	--enable-nopoll-doc=no
 
 define Build/InstallDev
-	$(INSTALL_DIR) $(1)/usr/{lib,include}
-	$(CP) $(PKG_INSTALL_DIR)/usr/include/* $(1)/usr/include/
-	$(CP) $(PKG_INSTALL_DIR)/usr/lib/libnopoll.{a,so*} $(1)/usr/lib/
+	$(INSTALL_DIR) $(1)/opt/{lib,include}
+	$(CP) $(PKG_INSTALL_DIR)/opt/include/* $(1)/opt/include/
+	$(CP) $(PKG_INSTALL_DIR)/opt/lib/libnopoll.{a,so*} $(1)/opt/lib/
 endef
 
 define Package/libnopoll/install
-	$(INSTALL_DIR) $(1)/usr/lib
-	$(CP) $(PKG_INSTALL_DIR)/usr/lib/libnopoll.so* $(1)/usr/lib/
+	$(INSTALL_DIR) $(1)/opt/lib
+	$(CP) $(PKG_INSTALL_DIR)/opt/lib/libnopoll.so* $(1)/opt/lib/
 endef
 
 $(eval $(call BuildPackage,libnopoll))
