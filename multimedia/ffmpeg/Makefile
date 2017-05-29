@@ -241,7 +241,7 @@ $(call Package/ffmpeg/Default)
  SECTION:=multimedia
  CATEGORY:=Multimedia
  TITLE+= program
- DEPENDS+= +libpthread +libffmpeg-full
+ DEPENDS+= +libffmpeg-full
  VARIANT:=full
 endef
 
@@ -273,7 +273,7 @@ $(call Package/ffserver/Default)
  SECTION:=multimedia
  CATEGORY:=Multimedia
  TITLE+= streaming server
- DEPENDS+= +libpthread +libffmpeg-full
+ DEPENDS+= +libffmpeg-full
  VARIANT:=full
 endef
 
