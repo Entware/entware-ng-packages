@@ -8,12 +8,12 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=fping
-PKG_VERSION:=3.13
+PKG_VERSION:=4.0
 PKG_RELEASE:=1
 
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.gz
 PKG_SOURCE_URL:=http://fping.org/dist/
-PKG_MD5SUM:=4bb28efd1cb3d1240ae551dadc20daa852b1ba71bafe32e49ca629c1848e5720
+PKG_HASH:=67eb4152b98ad34f99d2eec4e1098a0bb52caf13c0c89cd147349d08190fe8ce
 
 PKG_MAINTAINER:=Nikil Mehta <nikil.mehta@gmail.com>
 PKG_LICENSE:=BSD-4-Clause
@@ -46,7 +46,7 @@ CONFIGURE_ARGS+= \
 
 define Package/fping/install
 	$(INSTALL_DIR) $(1)/opt/bin
-	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/opt/sbin/{fping,fping6} $(1)/opt/bin/
+	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/opt/sbin/fping $(1)/opt/bin/
 endef
 
 $(eval $(call BuildPackage,fping))
