@@ -20,8 +20,8 @@ PKG_INSTALL:=1
 
 include $(INCLUDE_DIR)/package.mk
 
-ifdef CONFIG_USE_MIPS16
-  TARGET_CFLAGS += -fno-ipa-sra
+ifdef CONFIG_mipsel
+  TARGET_CFLAGS += -std=c99 -fno-ipa-sra
 endif
 
 define Package/jq
