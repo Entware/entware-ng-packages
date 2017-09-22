@@ -495,8 +495,6 @@ CONFIGURE_ARGS += \
 	--without-libltdl \
 	--with-statepath=/opt/var/run \
 	--with-drvpath=/opt/lib/nut \
-	--with-cgipath=/opt/share/www/cgi-bin/nut \
-	--with-htmlpath=/opt/share/www/nut \
 	--with-user=root \
 	--with-group=root
 
