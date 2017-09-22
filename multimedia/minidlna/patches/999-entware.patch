@@ -1,0 +1,2109 @@
+diff -auNp a/albumart.c b/albumart.c
+--- a/albumart.c	2017-05-17 23:55:17.000000000 +0300
++++ b/albumart.c	2017-06-29 12:55:01.151307000 +0300
+@@ -31,6 +31,9 @@
+ #include <errno.h>
+ 
+ #include <jpeglib.h>
++#ifdef THUMBNAIL_CREATION
++#include <libffmpegthumbnailer/videothumbnailerc.h>
++#endif
+ 
+ #include "upnpglobalvars.h"
+ #include "albumart.h"
+@@ -39,19 +42,30 @@
+ #include "image_utils.h"
+ #include "log.h"
+ 
++#if HAVE_LIBPNG
++#define ALPHA ,alpha
++#else
++#define ALPHA
++#endif
++
+ static int
+ art_cache_exists(const char *orig_path, char **cache_file)
+ {
+-	if( xasprintf(cache_file, "%s/art_cache%s", db_path, orig_path) < 0 )
++	*cache_file = malloc (strlen (db_path) + strlen (orig_path) + 15);
++	if (*cache_file == (char *)NULL)
+ 		return 0;
+ 
+-	strcpy(strchr(*cache_file, '\0')-4, ".jpg");
++	sprintf (*cache_file, "%s/art_cache%s.jpg", db_path, orig_path);
+ 
+ 	return (!access(*cache_file, F_OK));
+ }
+ 
+ static char *
++#if HAVE_LIBPNG
++save_resized_album_art(image_s *imsrc, const char *path, int alpha)
++#else
+ save_resized_album_art(image_s *imsrc, const char *path)
++#endif
+ {
+ 	int dstw, dsth;
+ 	image_s *imdst;
+@@ -84,6 +98,11 @@ save_resized_album_art(image_s *imsrc, c
+ 		return NULL;
+ 	}
+ 
++#if HAVE_LIBPNG
++	if (alpha)
++		image_png_composite (imdst);
++#endif
++
+ 	cache_file = image_save_to_jpeg_file(imdst, cache_file);
+ 	image_free(imdst);
+ 	
+@@ -170,6 +189,7 @@ check_embedded_art(const char *path, uin
+ 	static unsigned int last_hash = 0;
+ 	static int last_success = 0;
+ 	unsigned int hash;
++	int alpha = 0;
+ 
+ 	if( !image_data || !image_size || !path )
+ 	{
+@@ -204,6 +224,15 @@ check_embedded_art(const char *path, uin
+ 	}
+ 	last_hash = hash;
+ 
++#if HAVE_LIBPNG
++			if ((image_size >= 8) &&
++					(!memcmp (image_data, PNG_ID, PNG_ID_LEN)))
++			{
++				imsrc = image_new_from_png (NULL, 0, image_data, image_size, 1,
++						ROTATE_NONE, &alpha);
++			}
++			else
++#endif
+ 	imsrc = image_new_from_jpeg(NULL, 0, image_data, image_size, 1, ROTATE_NONE);
+ 	if( !imsrc )
+ 	{
+@@ -215,7 +244,7 @@ check_embedded_art(const char *path, uin
+ 
+ 	if( width > 160 || height > 160 )
+ 	{
+-		art_path = save_resized_album_art(imsrc, path);
++		art_path = save_resized_album_art(imsrc, path ALPHA);
+ 	}
+ 	else if( width > 0 && height > 0 )
+ 	{
+@@ -271,6 +300,9 @@ check_for_album_file(const char *path)
+ 	const char *dir;
+ 	struct stat st;
+ 	int ret;
++#if HAVE_LIBPNG
++	int alpha = 0;
++#endif
+ 
+ 	if( stat(path, &st) != 0 )
+ 		return NULL;
+@@ -328,14 +360,24 @@ existing_file:
+ 				return art_file;
+ 			}
+ 			free(art_file);
++#if HAVE_LIBPNG
++			if (ends_with (file, ".png"))
++			{
++				imsrc = image_new_from_png (file, 1, NULL, 0, 1, ROTATE_NONE,
++						&alpha);
++			}
++			else
++				imsrc = image_new_from_jpeg(file, 1, NULL, 0, 1, ROTATE_NONE);
++#else
+ 			imsrc = image_new_from_jpeg(file, 1, NULL, 0, 1, ROTATE_NONE);
++#endif
+ 			if( !imsrc )
+ 				continue;
+ found_file:
+ 			width = imsrc->width;
+ 			height = imsrc->height;
+ 			if( width > 160 || height > 160 )
+-				art_file = save_resized_album_art(imsrc, file);
++				art_file = save_resized_album_art(imsrc, file ALPHA);
+ 			else
+ 				art_file = strdup(file);
+ 			image_free(imsrc);
+@@ -345,6 +387,50 @@ found_file:
+ 	return NULL;
+ }
+ 
++#ifdef THUMBNAIL_CREATION
++char *
++generate_thumbnail(const char * path)
++{
++	char *tfile = NULL;
++	video_thumbnailer *vt = NULL;
++	char cache_dir[MAXPATHLEN];
++
++	if( art_cache_exists(path, &tfile) )
++		return tfile;
++
++	if ( is_video(path) )
++	{
++
++		vt = video_thumbnailer_create();
++		if ( !vt )
++		{
++			free(tfile);
++			return 0;
++		}
++		vt->thumbnail_image_type = Jpeg;
++		vt->thumbnail_image_quality = runtime_vars.thumb_quality;
++		vt->thumbnail_size = runtime_vars.thumb_width;
++		vt->seek_percentage = 20;
++		vt->overlay_film_strip = (GETFLAG(THUMB_FILMSTRIP))?1:0;
++
++		DPRINTF(E_DEBUG, L_METADATA, "generating thumbnail: %s\n", path);
++
++		strncpyt(cache_dir, tfile, sizeof(cache_dir));
++		if ( !make_dir(dirname(cache_dir), S_IRWXU|S_IRGRP|S_IXGRP|S_IROTH|S_IXOTH) &&
++			!video_thumbnailer_generate_thumbnail_to_file(vt, path, tfile) )
++		{
++			video_thumbnailer_destroy(vt);
++			return tfile;
++		}
++
++		video_thumbnailer_destroy(vt);
++	}
++	free(tfile);
++
++	return 0;
++}
++#endif
++
+ int64_t
+ find_album_art(const char *path, uint8_t *image_data, int image_size)
+ {
+@@ -353,6 +439,18 @@ find_album_art(const char *path, uint8_t
+ 
+ 	if( (image_size && (album_art = check_embedded_art(path, image_data, image_size))) ||
+ 	    (album_art = check_for_album_file(path)) )
++	if(image_size)
++		album_art = check_embedded_art(path, image_data, image_size);
++
++	if(!album_art)
++		album_art = check_for_album_file(path);
++
++#ifdef THUMBNAIL_CREATION
++	if(!album_art && GETFLAG(THUMB_MASK))
++		album_art = generate_thumbnail(path);
++#endif
++
++	if(album_art)		
+ 	{
+ 		ret = sql_get_int_field(db, "SELECT ID from ALBUM_ART where PATH = '%q'", album_art);
+ 		if( !ret )
+diff -auNp a/clients.c b/clients.c
+--- a/clients.c	2017-05-17 23:55:17.000000000 +0300
++++ b/clients.c	2017-06-29 12:55:01.151307000 +0300
+@@ -15,6 +15,8 @@
+  * You should have received a copy of the GNU General Public License
+  * along with MiniDLNA. If not, see <http://www.gnu.org/licenses/>.
+  */
++#include "config.h"
++
+ #include <stdio.h>
+ #include <string.h>
+ #include <time.h>
+diff -auNp a/configure.ac b/configure.ac
+--- a/configure.ac	2017-06-29 15:28:16.551131271 +0300
++++ b/configure.ac	2017-06-29 13:29:14.061635477 +0300
+@@ -405,6 +405,11 @@ done
+ test x"$ac_cv_lib_jpeg_jpeg_set_defaults" = x"yes" || AC_MSG_ERROR([Could not find libexif])
+ AC_SUBST(LIBEXIF_LIBS)
+ 
++PKG_CHECK_MODULES([libpng], [libpng],
++		  AM_CONDITIONAL(HAVE_LIBPNG, true)
++		  AC_DEFINE(HAVE_LIBPNG,1,[Define to 1 if you have libpng]),
++		  AM_CONDITIONAL(HAVE_LIBPNG, false))
++
+ LDFLAGS_SAVE="$LDFLAGS"
+ for dir in "" /usr/local $SEARCH_DIR; do
+     if test -n "$dir"; then
+@@ -485,6 +490,13 @@ AC_CHECK_LIB(avahi-client, avahi_threade
+          AM_CONDITIONAL(HAVE_AVAHI, false),
+         -lavahi-client -lavahi-common)
+ 
++#test if we have opusfile
++
++PKG_CHECK_MODULES([opus], [opusfile],
++	AM_CONDITIONAL(HAVE_OPUS, true)
++	AC_DEFINE(HAVE_OPUS,1,[Define to 1 if you have opusfile]),
++	AM_CONDITIONAL(HAVE_OPUS, false))
++
+ ################################################################################################################
+ ### Header checks
+ 
+@@ -617,6 +629,21 @@ AC_ARG_ENABLE(static,
+         ]
+ )
+ 
++AC_ARG_ENABLE(thumbnail,
++	[  --enable-thumbnail       enable video thumbnail generation using libffmpegthumbnailer],[
++	if test "$enableval" = "yes"; then
++		AC_DEFINE([THUMBNAIL_CREATION],[1],[Define to 1 if you want to enable video thumbnail generation])
++		PKG_CHECK_MODULES([LIBFFMPEGTHUMBNAILER], libffmpegthumbnailer, ,
++			AC_MSG_ERROR([Unable to find libffmpegthumbnailer]))
++		AC_SUBST([LIBFFMPEGTHUMBNAILER_CFLAGS])
++		AC_SUBST([LIBFFMPEGTHUMBNAILER_LIBS])
++        else
++                AC_MSG_RESULT([no])
++        fi
++        ],[
++                AC_MSG_RESULT([no])
++        ]
++)
+ 
+ case "$target_os" in
+ 	darwin*)
+diff -auNp a/getifaddr.c b/getifaddr.c
+--- a/getifaddr.c	2017-05-17 23:55:17.000000000 +0300
++++ b/getifaddr.c	2017-06-29 12:55:01.151307000 +0300
+@@ -26,6 +26,8 @@
+  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+  * POSSIBILITY OF SUCH DAMAGE.
+  */
++#include "config.h"
++
+ #include <stdio.h>
+ #include <stdlib.h>
+ #include <string.h>
+@@ -42,7 +44,6 @@
+ #include <sys/sockio.h>
+ #endif
+ 
+-#include "config.h"
+ #if HAVE_GETIFADDRS
+ # include <ifaddrs.h>
+ # ifdef __linux__
+diff -auNp a/icons.c b/icons.c
+--- a/icons.c	2017-05-17 23:55:17.000000000 +0300
++++ b/icons.c	2017-06-29 12:55:01.151307000 +0300
+@@ -18,6 +18,8 @@
+  * along with MiniDLNA. If not, see <http://www.gnu.org/licenses/>.
+  */
+ 
++#include "icons.h"
++
+ #ifdef NETGEAR
+ /* NG_Icon_48x48.png */
+ unsigned char
+@@ -2929,3 +2931,10 @@ jpeg_lrg[] = "\xff\xd8\xff\xe0\x00\x10\x
+              "\x1e\x88\x20\xa8\xd8\xba\xe2\x7e\xdc\x26\x9a\x69\x08\xf7\x22\x22\x02\x82\x28\x82\x29\xe8\x88\x9e"
+              "\xda\x69\xa6\x90\x8f\xff\xd9";
+ #endif
++
++struct icon_struct icons = {
++	{ png_lrg, png_sm, jpeg_lrg, jpeg_sm },
++	{ sizeof (png_lrg)-1, sizeof (png_sm)-1,
++		sizeof (jpeg_lrg)-1, sizeof (jpeg_sm)-1 },
++	{ 0, 0, 0, 0 }
++};
+diff -auNp a/icons.h b/icons.h
+--- a/icons.h	1970-01-01 03:00:00.000000000 +0300
++++ b/icons.h	2017-06-29 12:55:01.151307000 +0300
+@@ -0,0 +1,24 @@
++#ifndef __ICONS_H__
++#define __ICONG_H__
++
++#define ICON_FIRST 0
++#define ICON_LAST 3
++#define ICON_PNG_LRG 0
++#define ICON_PNG_SM 1
++#define ICON_JPEG_LRG 2
++#define ICON_JPEG_SM 3
++
++struct icon_struct {
++    unsigned char *icon[4];
++    int size[4];
++    int dynamic[4];
++};
++
++extern unsigned char png_sm[];
++extern unsigned char png_lrg[];
++extern unsigned char jpeg_sm[];
++extern unsigned char jpeg_lrg[];
++
++extern struct icon_struct icons;
++
++#endif
+diff -auNp a/image_utils.c b/image_utils.c
+--- a/image_utils.c	2017-05-17 23:55:17.000000000 +0300
++++ b/image_utils.c	2017-06-29 12:55:01.151307000 +0300
+@@ -31,7 +31,15 @@
+ #include <stdlib.h>
+ #include <string.h>
+ #include <unistd.h>
++#include <ctype.h>
++
++/* phg.h brings in setjmp.h; you can't include both */
++#ifdef HAVE_LIBPNG
++#include <png.h>
++#else
+ #include <setjmp.h>
++#endif
++
+ #include <jpeglib.h>
+ #ifdef HAVE_MACHINE_ENDIAN_H
+ #include <machine/endian.h>
+@@ -68,6 +76,9 @@ struct my_dst_mgr {
+ 	size_t used;
+ };
+ 
++static int32_t _png_bgcolor1 = DEFAULT_BGCOLOR1,
++			   _png_bgcolor2 = DEFAULT_BGCOLOR2;
++
+ /* Destination manager to store data in a buffer */
+ static void
+ my_dst_mgr_init(j_compress_ptr cinfo)
+@@ -573,6 +584,472 @@ image_new_from_jpeg(const char *path, in
+ 	return vimage;
+ }
+ 
++#ifdef HAVE_LIBPNG
++
++int
++image_color_from_hex (const char *s, uint32_t *color)
++{
++    const char *hexdigits = "0123456789abcdef", *p, *hdp;
++    int j, l = strlen (s);
++
++    if ((l != 6) && (l != 8))
++    {
++		DPRINTF (E_WARN, L_GENERAL,
++			"image_color_from_hex():  Illegal number of bytes (only three or four (RGB or RGBA) may be specified).\n");
++		return -1;
++    }
++
++    *color = 0;
++    p = s;
++    for (j = l - 1; j >= 0; j--)
++    {
++		if ((hdp = strchr (hexdigits, tolower (*p++))) == (char *)NULL)
++		{
++			DPRINTF (E_WARN, L_GENERAL,
++				"image_bgcolor_from_hex(): Illegal character.\n");
++			return -1;
++		}
++		*color |= (hdp - hexdigits) << (j << 2);
++    }
++    if (l == 6)
++	*color = (*color << 8) | 0xff;
++    return 0;
++}
++
++int
++image_set_png_bgcolor (const char *color1, const char *color2)
++{
++	uint32_t bgcolor;
++
++	if (image_color_from_hex (color1, &bgcolor))
++		return -1;
++	else
++		_png_bgcolor1 = (int32_t)(bgcolor >> 8);
++
++	if (color2 != (char *)NULL)
++	{
++		if (image_color_from_hex (color2, &bgcolor))
++			_png_bgcolor2 = -1;
++		else
++			_png_bgcolor2 = (int32_t)(bgcolor >> 8);
++	}
++	else
++		_png_bgcolor2 = -1;
++
++	return 0;
++}
++
++void
++image_png_composite (image_s *img)
++{
++	image_bgcolor_composite (img, _png_bgcolor1, _png_bgcolor2);
++}
++
++static void
++_png_read_data (png_structp png_ptr, png_bytep data, png_size_t length)
++{
++	struct _iu_png_io_struct *iu_png_io = png_get_io_ptr (png_ptr);
++	if (iu_png_io->fp)
++	{
++		if ((fread (data, 1, length, iu_png_io->fp)) < length)
++		{
++			if (ferror (iu_png_io->fp))
++				png_error (png_ptr, "file read error");
++		}
++	}
++	else
++	{
++		size_t bytes = (length < iu_png_io->count) ?
++			length : iu_png_io->count;
++		if (((iu_png_io->count) <= 0) && (length > 0))
++			png_error (png_ptr, "read buffer empty");
++		memcpy (data, iu_png_io->bufp, bytes);
++		iu_png_io->bufp += bytes;
++		iu_png_io->count -= bytes;
++	}
++}
++
++image_s *
++image_new_from_png(const char *path, int is_file, uint8_t *buf, int size, int scale, int rotate, int *alpha)
++{
++	image_s *vimage = NULL;
++	FILE  *file = NULL;
++	struct _iu_png_io_struct iu_png_io;
++	int x, y, w, h, maxbuf, ofs, srcx, rx, ry;
++
++	png_bytepp row_pointers;
++	png_bytep ptr;
++	png_uint_32 width, height;
++	int bit_depth, color_type, interlace_type, compression_type, filter_method;
++
++	png_structp png_ptr;
++	png_infop info_ptr, end_ptr;
++
++	/* sanity check */
++	if (scale <= 0)
++		scale = 1;
++
++	if( is_file )
++	{
++		if( (file = fopen(path, "rb")) == NULL )
++		{
++			return NULL;
++		}
++		iu_png_io.fp = file;
++		iu_png_io.buf = NULL;
++		iu_png_io.count = 0;
++	}
++	else
++	{
++		iu_png_io.fp = NULL;
++		iu_png_io.buf = iu_png_io.bufp = buf;
++		iu_png_io.count = size;
++	}
++
++
++	png_ptr = png_create_read_struct (PNG_LIBPNG_VER_STRING, NULL,NULL,NULL);
++	if (!png_ptr)
++	{
++		if (is_file)
++			fclose (file);
++		return NULL;
++	}
++
++	info_ptr = png_create_info_struct (png_ptr);
++	if (!info_ptr)
++	{
++		png_destroy_read_struct (&png_ptr, (png_infopp)NULL, (png_infopp)NULL);
++		if (is_file)
++			fclose (file);
++		return NULL;
++	}
++	end_ptr = png_create_info_struct (png_ptr);
++	if (!end_ptr)
++	{
++		png_destroy_read_struct (&png_ptr, &info_ptr, (png_infopp)NULL);
++		if (is_file)
++			fclose (file);
++		return NULL;
++	}
++
++	if (setjmp (png_jmpbuf (png_ptr)))
++	{
++		png_destroy_read_struct(&png_ptr, &info_ptr, &end_ptr);
++		if (is_file)
++			fclose (file);
++		if (vimage)
++			image_free (vimage);
++		return NULL;
++	}
++
++	png_set_read_fn (png_ptr, &iu_png_io, _png_read_data);
++
++	png_read_png (png_ptr, info_ptr,
++			PNG_TRANSFORM_STRIP_16|
++			PNG_TRANSFORM_PACKING|PNG_TRANSFORM_EXPAND,
++			NULL);
++
++	//png_read_update_info (png_ptr, info_ptr);
++	png_get_IHDR(png_ptr, info_ptr, &width, &height,
++			&bit_depth, &color_type, &interlace_type,
++			&compression_type, &filter_method);
++
++	DPRINTF (E_MAXDEBUG, L_METADATA,
++			"Read %s (%dx%dx%d)\n",
++			is_file ? path : "(memory)",
++			(int)width, (int)height, (int)bit_depth);
++
++	row_pointers = png_get_rows (png_ptr, info_ptr);
++
++	if (alpha)
++		*alpha = (color_type & PNG_COLOR_MASK_ALPHA) != 0;
++
++	/* The use of "scale" doesn't make such a big difference, but it does
++	 * speed up the eventual resize and makes this memory pig a little
++	 * lighter */
++	w = width/scale + (width % scale ? 1 : 0);
++	h = height/scale + (height % scale ? 1 : 0);
++
++	vimage = (rotate & (ROTATE_90|ROTATE_270)) ?
++	    image_new(h, w) : image_new(w, h);
++
++	if(!vimage)
++	{
++		png_destroy_read_struct(&png_ptr, &info_ptr, &end_ptr);
++		if( is_file )
++			fclose(file);
++		return NULL;
++	}
++
++	maxbuf = vimage->width * vimage->height;
++
++	for (y = 0; y < h; y++)
++	{
++		ry = (rotate & (ROTATE_90|ROTATE_180)) ? (y - h + 1) * -1 : y;
++		ptr = row_pointers[y*scale];
++
++		for (x = 0; x < w; x ++)
++		{
++			srcx = x*scale;
++			rx = (rotate & (ROTATE_180|ROTATE_270)) ? (x - w + 1) * -1 : x;
++			ofs = (rotate & (ROTATE_90|ROTATE_270)) ?
++				ry + (rx * h) : rx + (ry * w);
++
++			if (ofs >= maxbuf)
++				continue;
++
++			if (color_type == PNG_COLOR_TYPE_RGBA)
++			{
++				srcx *= 4;
++				vimage->buf[ofs] =
++					COL_FULL (ptr[srcx], ptr[srcx+1], ptr[srcx+2], ptr[srcx+3]);
++			}
++			else if (color_type == PNG_COLOR_TYPE_RGB)
++			{
++				srcx *= 3;
++				vimage->buf[ofs] =
++					COL (ptr[srcx], ptr[srcx+1], ptr[srcx+2]);
++			}
++			else if (color_type == PNG_COLOR_TYPE_GRAY_ALPHA)
++			{
++				srcx *= 2;
++				vimage->buf[ofs] =
++					COL_FULL (ptr[srcx], ptr[srcx], ptr[srcx], ptr[srcx+1]);
++			}
++			else if (color_type == PNG_COLOR_TYPE_GRAY)
++			{
++				vimage->buf[ofs] = COL (ptr[srcx], ptr[srcx], ptr[srcx]);
++			}
++			else
++			{
++				DPRINTF (E_MAXDEBUG, L_METADATA,
++						"%s: Unexpected color type encountered\n", path);
++				image_free (vimage);
++				vimage = NULL;
++				break;
++			}
++		}
++	}
++
++	png_destroy_read_struct(&png_ptr, &info_ptr, &end_ptr);
++	if( is_file )
++		fclose(file);
++	return vimage;
++}
++
++static void
++_png_write_data (png_structp png_ptr, png_bytep data, png_size_t length)
++{
++	struct _iu_png_io_struct *iu_png_io = png_get_io_ptr (png_ptr);
++	if (iu_png_io->fp)
++	{
++		if ((fwrite (data, 1, length, iu_png_io->fp)) < length)
++			png_error (png_ptr, "file write error");
++	}
++	else
++	{
++		png_bytep scratch;
++		scratch = realloc (iu_png_io->buf, iu_png_io->count+length);
++		if (!scratch)
++			png_error (png_ptr, "memory allocation error");
++		iu_png_io->buf = scratch;
++		memcpy (iu_png_io->buf + iu_png_io->count, data, length);
++		iu_png_io->count += length;
++	}
++}
++
++static void
++_png_flush_data (png_structp png_ptr)
++{
++	struct _iu_png_io_struct *iu_png_io = png_get_io_ptr (png_ptr);
++	if (iu_png_io->fp)
++	{
++		if ((fflush (iu_png_io->fp)) == EOF)
++			png_error (png_ptr, "flush error");
++	}
++}
++
++size_t
++image_save_to_png (const image_s *img, char *path,
++		uint8_t **buf, int alpha, int compression)
++{
++	int is_file = (path != (char *)NULL);
++	FILE *file = NULL;
++	uint32_t *ibp;
++	png_bytep p, png_imgbuf = NULL;
++	struct _iu_png_io_struct iu_png_io;
++	png_structp png_ptr;
++	png_infop info_ptr;
++	png_bytepp row_pointers = NULL;
++
++	int x,y;
++
++	png_ptr = png_create_write_struct (PNG_LIBPNG_VER_STRING,
++			NULL, NULL, NULL);
++
++	if (!png_ptr)
++		return -1;
++
++	info_ptr = png_create_info_struct (png_ptr);
++	if (!info_ptr)
++	{
++		png_destroy_write_struct (&png_ptr, (png_infopp)NULL);
++		return -1;
++	}
++
++	if (is_file)
++	{
++		file = fopen (path, "wb");
++		if (file == (FILE *)NULL)
++		{
++			png_destroy_write_struct (&png_ptr, &info_ptr);
++			return -1;
++		}
++		iu_png_io.fp = file;
++	}
++	else
++	{
++		iu_png_io.fp = NULL;
++		iu_png_io.buf = NULL;
++		iu_png_io.count = 0;
++	}
++
++	if (setjmp (png_jmpbuf (png_ptr)))
++	{
++		png_destroy_write_struct (&png_ptr, &info_ptr);
++		if (is_file)
++			fclose (file);
++		if (png_imgbuf != (png_bytep)NULL)
++		    free (png_imgbuf);
++		if (row_pointers != (png_bytepp)NULL)
++		    free (row_pointers);
++		return -1;
++	}
++
++	png_set_filter (png_ptr, 0, PNG_FILTER_NONE);
++	png_set_IHDR (png_ptr, info_ptr, img->width, img->height, 8,
++			alpha ? PNG_COLOR_TYPE_RGBA : PNG_COLOR_TYPE_RGB,
++			PNG_INTERLACE_NONE, PNG_COMPRESSION_TYPE_DEFAULT,
++			PNG_FILTER_TYPE_DEFAULT);
++
++	if ((compression >= 0) && (compression <= 9))
++	    png_set_compression_level (png_ptr, compression);
++
++	row_pointers = malloc (img->height * sizeof (png_bytep));
++	png_imgbuf = malloc (img->height * img->width * (alpha ? 4:3));
++
++	p = png_imgbuf;
++	ibp = img->buf;
++
++	for (y = 0; y < img->height; y++)
++	{
++		row_pointers[y] = p;
++		for (x = 0; x < img->width; x++)
++		{
++			*(p++) = (*ibp >> 24) & 0xff;
++			*(p++) = (*ibp >> 16) & 0xff;
++			*(p++) = (*ibp >> 8) & 0xff;
++			if (alpha)
++				*(p++) = *ibp & 0xff;
++			++ibp;
++		}
++	}
++
++	png_set_rows (png_ptr, info_ptr, row_pointers);
++
++	png_set_write_fn (png_ptr,
++			&iu_png_io,
++			_png_write_data, _png_flush_data);
++
++	png_write_png (png_ptr, info_ptr, PNG_TRANSFORM_IDENTITY, NULL);
++
++	png_destroy_write_struct (&png_ptr, &info_ptr);
++	free (row_pointers);
++	free (png_imgbuf);
++
++	if (is_file)
++	{
++		fclose (file);
++		return 0;
++	}
++
++	*buf = iu_png_io.buf;
++	return iu_png_io.count;
++}
++
++
++#endif	/* HAVE_LIBPNG */
++
++#define DECOMPOSE_RGB(c, r,g,b) { \
++	r = (double)(((c) >> 16) & 0xff) / 255.0; \
++	g = (double)(((c) >> 8) & 0xff) / 255.0; \
++	b = (double)((c) & 0xff) / 255.0; \
++}
++
++#define EXCH_RGB(r1,g1,b1, r2,g2,b2) { \
++	double rscratch = r1, \
++		   gscratch = g1, \
++		   bscratch = b1; \
++	r1 = r2; g1 = g2; b1 = b2; \
++	r2 = rscratch; g2 = gscratch; b2 = bscratch; \
++}
++
++void
++image_bgcolor_composite (image_s *img, int32_t bgcolor1, int32_t bgcolor2)
++{
++	int j,k;
++	uint32_t *p = img->buf;
++
++	double r,g,b,a, rbg,gbg,bbg,
++		   rbgl,gbgl,bbgl, rbgd,gbgd,bbgd,
++		   rbg2,gbg2,bbg2;
++
++	int checkerboard = bgcolor2 >= 0;
++
++	DECOMPOSE_RGB (bgcolor1, rbg,gbg,bbg)
++
++	if (checkerboard)
++	{
++		DECOMPOSE_RGB (bgcolor2, rbgl,gbgl,bbgl)
++
++		rbgd = rbg;
++		gbgd = gbg;
++		bbgd = bbg;
++	}
++
++	for (j = 0; j < img->height; j++)
++	{
++		if (checkerboard)
++		{
++			rbg = rbgl;
++			gbg = gbgl;
++			bbg = bbgl;
++			rbg2 = rbgd;
++			gbg2 = gbgd;
++			bbg2 = bbgd;
++			if (j & 8)
++				EXCH_RGB (rbg,gbg,bbg, rbg2,gbg2,bbg2)
++		}
++		for (k = 0; k < img->width; k++)
++		{
++			uint8_t br,bg,bb;
++			r = (double)(*p >> 24) / 255.0;
++			g = (double)((*p >> 16) & 0xff) / 255.0;
++			b = (double)((*p >> 8) & 0xff) / 255.0;
++			a = (double)(*p & 0xff) / 255.0;
++
++			if (checkerboard && !(k & 7))
++				EXCH_RGB (rbg,gbg,bbg, rbg2,gbg2,bbg2)
++
++			br = (r * a + rbg*(1 - a)) * 255;
++			bg = (g * a + gbg*(1 - a)) * 255;
++			bb = (b * a + bbg*(1 - a)) * 255;
++
++			*(p++) = COL (br,bg,bb);
++		}
++	}
++}
++
+ void
+ image_upsize(image_s * pdest, image_s * psrc, int32_t width, int32_t height)
+ {
+diff -auNp a/image_utils.h b/image_utils.h
+--- a/image_utils.h	2017-05-17 23:55:17.000000000 +0300
++++ b/image_utils.h	2017-06-29 12:55:01.151307000 +0300
+@@ -28,6 +28,16 @@
+ #define ROTATE_180  0x2
+ #define ROTATE_270  0x4
+ 
++#ifdef HAVE_LIBPNG
++/* background color for images w/transparency */
++#define DEFAULT_BGCOLOR1 0x666666
++#define DEFAULT_BGCOLOR2 0x999999
++#endif
++
++#define BE32(b) ((*(b)<<24) | (*((b)+1)<<16) | (*((b)+2)<<8) | *((b)+3))
++#define PNG_ID "\x89PNG\x0d\x0a\x1a\x0a"
++#define PNG_ID_LEN 8
++
+ typedef uint32_t pix;
+ 
+ typedef struct {
+@@ -46,7 +56,27 @@ int
+ image_get_jpeg_resolution(const char * path, int * width, int * height);
+ 
+ image_s *
+-image_new_from_jpeg(const char *path, int is_file, const uint8_t *ptr, int size, int scale, int resize);
++image_new_from_jpeg(const char *path, int is_file, const uint8_t *ptr, int size, int scale, int rotate);
++
++#if HAVE_LIBPNG
++
++int image_color_from_hex (const char *s, uint32_t *color);
++int image_set_png_bgcolor (const char *, const char *);
++void image_png_composite (image_s *img);
++
++image_s *
++image_new_from_png(const char *path, int is_file, uint8_t *ptr, int size, int scale, int rotate, int *alpha);
++
++size_t
++image_save_to_png (const image_s *img, char *path,
++		uint8_t **buf, int alpha, int compression);
++
++struct _iu_png_io_struct {
++    FILE *fp;
++    uint8_t *buf, *bufp;
++    size_t count;
++};
++#endif
+ 
+ image_s *
+ image_resize(image_s * src_image, int32_t width, int32_t height);
+@@ -56,3 +86,6 @@ image_save_to_jpeg_buf(image_s * pimage,
+ 
+ char *
+ image_save_to_jpeg_file(image_s * pimage, char * path);
++
++void
++image_bgcolor_composite (image_s *img, int32_t bgcolor1, int32_t bgcolor2);
+
+diff -auNp a/Makefile.am b/Makefile.am
+--- a/Makefile.am	2017-06-29 15:28:16.551131271 +0300
++++ b/Makefile.am	2017-06-29 15:27:00.626595352 +0300
+@@ -15,13 +15,14 @@
+ # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307
+ # USA.
+ 
+-AM_CFLAGS = -Wall -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64 @STATIC_CFLAGS@
++AM_CFLAGS = -Wall -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64 @STATIC_CFLAGS@ \
++	    @libpng_CFLAGS@ @opus_CFLAGS@
+ 
+ SUBDIRS=
+ 
+ sbin_PROGRAMS = minidlnad
+ check_PROGRAMS = testupnpdescgen
+-minidlnad_SOURCES = minidlna.c upnphttp.c upnpdescgen.c upnpsoap.c \
++minidlnad_SOURCES = minidlna.c icons.c upnphttp.c upnpdescgen.c upnpsoap.c \
+ 			upnpreplyparse.c minixml.c clients.c \
+ 			getifaddr.c process.c upnpglobalvars.c \
+ 			options.c minissdp.c uuid.c upnpevents.c \
+@@ -46,6 +47,7 @@ endif
+ 
+ minidlnad_LDADD = \
+ 	@LIBJPEG_LIBS@ \
++	@libpng_LIBS@ \
+ 	@LIBID3TAG_LIBS@ \
+ 	@LIBSQLITE3_LIBS@ \
+ 	@LIBAVFORMAT_LIBS@ \
+@@ -53,7 +55,8 @@ minidlnad_LDADD = \
+ 	@LIBEXIF_LIBS@ \
+ 	@LIBINTL@ \
+ 	@LIBICONV@ \
+-	-lFLAC $(flacogglibs) $(vorbislibs) $(avahilibs)
++	-lFLAC $(flacogglibs) $(vorbislibs) $(avahilibs) @LIBFFMPEGTHUMBNAILER_LIBS@ \
++	@opus_LIBS@
+ 
+ minidlnad_LDFLAGS = @STATIC_LDFLAGS@
+ 
+diff -auNp a/metadata.c b/metadata.c
+--- a/metadata.c	2017-05-17 23:55:17.000000000 +0300
++++ b/metadata.c	2017-06-29 15:46:00.219083281 +0300
+@@ -338,9 +338,53 @@ GetAudioMetadata(const char *path, char
+ 	}
+ 	else if( ends_with(path, ".ogg") || ends_with(path, ".oga") )
+ 	{
++		/* The .ogg/.oga file extensions present something of a problem.
++		 * ".ogg" has been deprecated in favor of ".oga" for some time, but
++		 * many applications still only recognize ".ogg".
++		 *
++		 * This examines the file and causes .ogg to be presented for any naked
++		 * Vorbis file (MIME type audio/ogg; codecs=vorbis) and .oga
++		 * (audio/ogg) to be used for everything else.  This is in line with
++		 * the official ogg naming conventions and, hopefully, makes for a
++		 * resonable compromise.
++		 */
++		uint8_t oggtestbuf[35];
++		FILE *oggfile = fopen (path, "rb");
++
++		if (oggfile == (FILE *)NULL)
++		{
++			DPRINTF(E_ERROR, L_METADATA, "Error opening %s\n", path);
++			return 0;
++		}
++
++		if (fread (oggtestbuf, 1, 35, oggfile) != 35)
++		{
++			DPRINTF(E_WARN, L_METADATA, "Premature EOF on %s\n", path);
++			fclose (oggfile);
++			return 0;
++		}
++		fclose (oggfile);
++
++		if (memcmp (&oggtestbuf[28], "\x01vorbis", 7))
++			m.mime = strdup ("audio/ogg");
++		else
++			m.mime = strdup ("audio/ogg; codecs=vorbis");
++
+ 		strcpy(type, "ogg");
+-		m.mime = strdup("audio/ogg");
+ 	}
++	else if ( ends_with(path, ".opus") )
++	{
++		strcpy(type, "ops");
++		m.mime = strdup("audio/ogg; codecs=opus");
++	}
++#if 0
++	/* Not supported yet, and probably won't be. */
++	else if( ends_with(path, ".ogx") )
++	{
++		strcpy(type, "ogx");
++		m.mime = strdup("application/ogg");
++	}
++#endif
+ 	else if( ends_with(path, ".pcm") )
+ 	{
+ 		strcpy(type, "pcm");
+@@ -492,8 +536,8 @@ libjpeg_error_handler(j_common_ptr cinfo
+ 	return;
+ }
+ 
+-int64_t
+-GetImageMetadata(const char *path, char *name)
++static int64_t
++_get_jpeg_metadata(const char *path, char *name)
+ {
+ 	ExifData *ed;
+ 	ExifEntry *e = NULL;
+@@ -661,6 +705,298 @@ no_exifdata:
+ 	return ret;
+ }
+ 
++static uint8_t *
++_png_readchunk (FILE *file, size_t size)
++{
++	uint8_t *buf = malloc (size);
++
++	if (buf == (uint8_t *)NULL)
++		return NULL;
++
++	if (fread (buf, 1, size, file) != size)
++	{
++		free (buf);
++		return NULL;
++	}
++	/* seek past the checksum */
++	if (fseek (file, 4, SEEK_CUR))
++	{
++		free (buf);
++		return NULL;
++	}
++	return buf;
++}
++
++static int64_t
++_get_png_metadata (const char *path, char *name)
++{
++	FILE *file;
++	uint32_t width=0, height=0;
++	int thumb=0;
++	int got_header = 0;
++	struct stat statbuf;
++	int64_t ret;
++	metadata_t m;
++	uint8_t tagbuf[8];
++	uint32_t free_flags = 0;
++
++	memset(&m, '\0', sizeof(metadata_t));
++
++	if ( stat(path, &statbuf) != 0 )
++		return 0;
++	strip_ext(name);
++
++	if ((file = fopen (path, "rb")) == (FILE *)NULL)
++	{
++		DPRINTF (E_ERROR, L_METADATA, "Error opening \"%s\": %s\n",
++				path, strerror (errno));
++		return 0;
++	}
++
++	if (fread (tagbuf, 1, 8, file) != 8)
++	{
++		fclose (file);
++		return 0;
++	}
++
++	if (memcmp (tagbuf, PNG_ID, PNG_ID_LEN))
++	{
++		DPRINTF (E_WARN, L_METADATA,
++				"\"%s\" not a PNG file.\n", path);
++		fclose (file);
++		return 0;
++	}
++
++	/* Go through the chunks */
++
++	for (;;)
++	{
++		int32_t chunksize;
++		char *chunkname[5];
++		uint8_t *buf;
++
++		if ((fread (tagbuf, 1, 8, file)) != 8)
++		{
++			DPRINTF (E_WARN, L_METADATA,
++					"%s: Premature EOF.\n", path);
++			fclose (file);
++			free_metadata(&m, free_flags);
++			return 0;
++		}
++		chunksize = BE32 (&tagbuf[0]);
++		memcpy (chunkname, &tagbuf[4], 4);
++		chunkname[4] = '\x00';
++
++		if (!memcmp (&tagbuf[4], "IEND", 4))
++		{
++			break;
++		}
++		else if (chunksize <= 0)
++		{
++			if (fseek (file, 4, SEEK_CUR))
++			{
++				DPRINTF (E_WARN, L_METADATA,
++						"%s: Seek error.\n", path);
++				fclose (file);
++				free_metadata(&m, free_flags);
++				return 0;
++			}
++			continue;
++		}
++		else if (!memcmp (&tagbuf[4], "IHDR", 4)) {
++			if ((buf = _png_readchunk (file, chunksize)) == NULL)
++			{
++				fclose (file);
++				free_metadata(&m, free_flags);
++				return 0;
++			}
++			got_header = 1;
++
++			/* width and height are 32-bit BE starting at offset 0 */
++			width = BE32 (&buf[0]);
++			height = BE32 (&buf[4]);
++			free (buf);
++			continue;
++		}
++		else if (!memcmp (&tagbuf[4], "tIME", 4))
++		{
++			if ((buf = _png_readchunk (file, chunksize)) == NULL)
++			{
++				fclose (file);
++				free_metadata(&m, free_flags);
++				return 0;
++			}
++			if (free_flags & FLAG_DATE)
++				free (m.date);
++
++			xasprintf (&m.date, "%04d-%02d-%02dT%02d:%02d:%02d",
++					(int)(buf[0]<<8 | buf[1]),
++					(int)buf[2], (int)buf[3],
++					(int)buf[4], (int)buf[5], (int)buf[6]);
++			free_flags |= FLAG_DATE;
++			free (buf);
++			continue;
++		}
++		else if (!memcmp (&tagbuf[4], "tEXt", 4) ||
++				!memcmp (&tagbuf[4], "iTXt", 4))
++		{
++			int international = !memcmp (&tagbuf[4], "iTXt", 4),
++					remaining = chunksize;
++			char *keyword, *value;
++			uint8_t *textp;
++			int l;
++
++			if ((buf = _png_readchunk (file, chunksize)) == NULL)
++			{
++				fclose (file);
++				free_metadata(&m, free_flags);
++				return 0;
++			}
++
++			textp = buf;
++			keyword = (char *)buf;
++			l = strlen (keyword) + 1;
++			textp += l;
++			if ((remaining -= l) <= 0)
++				goto textdone;
++
++			if (international)
++			{
++				char *lang;
++
++				if (*textp)
++					/* compressed */
++					goto textdone;
++
++				textp += 2;
++				if ((remaining -= 2) <= 0)
++					goto textdone;
++
++				/* language */
++				lang = (char *)textp;
++				l = strlen (lang) + 1;
++				textp += l;
++				if ((remaining -= l) <= 0)
++					goto textdone;
++
++				/* translated keyword */
++				l = strlen ((char *)textp) + 1;
++				textp += l;
++				if ((remaining -= l) <= 0)
++					goto textdone;
++			}
++
++			/* whatever's left is the value */
++			if ((value = malloc (remaining + 1)) == (char *)NULL)
++			{
++				DPRINTF (E_ERROR, L_METADATA, "Allocation error.\n");
++				free (buf);
++				fclose (file);
++				free_metadata(&m, free_flags);
++				return 0;
++			}
++
++			memcpy (value, textp, remaining);
++			value[remaining] = '\0';
++
++			if (!strcmp (keyword, "Title"))
++			{
++				if (free_flags & FLAG_TITLE)
++					free (m.title);
++				m.title = value;
++				free_flags |= FLAG_TITLE;
++			}
++			else if (!strcmp (keyword, "Author"))
++			{
++				if (free_flags & FLAG_CREATOR)
++					free (m.creator);
++				m.creator = value;
++				free_flags |= FLAG_CREATOR;
++			}
++			else
++			{
++				free (value);
++			}
++
++textdone:
++			free (buf);
++		}
++		else
++		{
++			/* move on to the next chunk */
++			if (fseek (file, chunksize+4, SEEK_CUR))
++			{
++				DPRINTF (E_WARN, L_METADATA,
++						"%s: Seek error.\n", path);
++				fclose (file);
++				free_metadata(&m, free_flags);
++				return 0;
++			}
++		}
++	}
++	fclose (file);
++
++	if (!got_header)
++	{
++		DPRINTF (E_WARN, L_METADATA,
++				"%s: No PNG header.\n", path);
++		free_metadata (&m, free_flags);
++		return 0;
++	}
++
++	xasprintf(&m.resolution, "%dx%d", (int)width, (int)height);
++	m.rotation = 0;
++	thumb = 0;
++	m.dlna_pn = NULL;
++	m.mime = strdup("image/png");
++	free_flags |= (FLAG_MIME | FLAG_RESOLUTION);
++
++	if (!(free_flags & FLAG_TITLE))
++		m.title = strdup (name);
++	free_flags |= FLAG_TITLE;
++
++	DPRINTF (E_MAXDEBUG, L_METADATA,
++			"Processed \"%s\":\n  Name: %s\n  Resolution: %s\n",
++			path, name, m.resolution);
++
++	ret = sql_exec(db, "INSERT into DETAILS"
++	                   " (PATH, TITLE, SIZE, TIMESTAMP, DATE, RESOLUTION,"
++	                    " ROTATION, THUMBNAIL, CREATOR, DLNA_PN, MIME) "
++	                   "VALUES"
++	                   " (%Q, '%q', %lld, %lld, %Q, %Q, %u, %d, %Q, %Q, %Q);",
++	                   path, m.title, (long long)statbuf.st_size,
++					   (long long)statbuf.st_mtime, m.date, m.resolution,
++					   m.rotation, thumb, m.creator, m.dlna_pn, m.mime);
++	if( ret != SQLITE_OK )
++	{
++		DPRINTF(E_ERROR, L_METADATA, "Error inserting details for '%s'!\n", path);
++		ret = 0;
++	}
++	else
++	{
++		ret = sqlite3_last_insert_rowid(db);
++	}
++	free_metadata(&m, free_flags);
++
++	return ret;
++}
++
++
++int64_t
++GetImageMetadata(const char *path, char *name)
++{
++	if (ends_with (path, ".jpg") || ends_with (path, ".jpeg"))
++	{
++		return _get_jpeg_metadata (path, name);
++	}
++	else if (ends_with (path, ".png"))
++	{
++		return _get_png_metadata (path, name);
++	}
++	else
++		return 0;
++}
++
+ int64_t
+ GetVideoMetadata(const char *path, char *name)
+ {
+@@ -843,6 +1179,8 @@ GetVideoMetadata(const char *path, char
+ 			xasprintf(&m.mime, "video/x-matroska");
+ 		else if( strcmp(ctx->iformat->name, "flv") == 0 )
+ 			xasprintf(&m.mime, "video/x-flv");
++		else if( strcmp(ctx->iformat->name, "ogg") == 0 )
++			xasprintf(&m.mime, "video/ogg");
+ 		if( m.mime )
+ 			goto video_no_dlna;
+ 
+diff -auNp a/minidlna.c b/minidlna.c
+--- a/minidlna.c	2017-05-17 23:55:17.000000000 +0300
++++ b/minidlna.c	2017-06-29 14:23:07.917694082 +0300
+@@ -46,6 +46,8 @@
+  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+  * POSSIBILITY OF SUCH DAMAGE.
+  */
++#include "config.h"
++
+ #include <stdlib.h>
+ #include <unistd.h>
+ #include <string.h>
+@@ -69,8 +71,6 @@
+ #include <libgen.h>
+ #include <pwd.h>
+ 
+-#include "config.h"
+-
+ #ifdef ENABLE_NLS
+ #include <locale.h>
+ #include <libintl.h>
+@@ -95,6 +95,8 @@
+ #include "tivo_beacon.h"
+ #include "tivo_utils.h"
+ #include "avahi.h"
++#include "icons.h"
++#include "image_utils.h"
+ 
+ #if SQLITE_VERSION_NUMBER < 3005001
+ # warning "Your SQLite3 library appears to be too old!  Please use 3.5.1 or newer."
+@@ -255,6 +257,127 @@ getfriendlyname(char *buf, int len)
+ #endif
+ }
+ 
++#define DESTROY_ICON(s,i) \
++	if (s->dynamic[i]) free (s->icon[i])
++
++static void
++destroy_icons (struct icon_struct *s)
++{
++	int j;
++	for (j = ICON_FIRST; j <= ICON_LAST; j++)
++		DESTROY_ICON (s,j);
++}
++
++#ifdef HAVE_LIBPNG
++static int
++xround (double n)
++{
++	int i = n;
++	n -= i;
++	if ((n > 0.5) || ((n == 0.5) && (i & 0x1)))
++		++i;
++	return i;
++}
++
++static void
++set_user_icon_from_png (char *path, uint32_t bgcolor)
++{
++	int j, alpha;
++	image_s *img = image_new_from_png (path, 1, NULL, 0, 1, 0, &alpha);
++	image_s *img_sm, *img_lrg;
++	struct icon_struct newicons;
++	double n, scale_lrg, scale_sm;
++
++	if (img == (image_s *)NULL)
++	{
++		DPRINTF (E_WARN, L_GENERAL,
++				"Unable to load icon file \"%s\".\n", path);
++		return;
++	}
++
++	n = (img->height > img->width) ? img->height : img->width;
++	scale_lrg = 120.0 / n;
++	scale_sm = 48.0 / n;
++
++	if ((img_lrg = image_resize (img,
++					xround (img->width*scale_lrg),
++					xround(img->height*scale_lrg))) == (image_s *)NULL)
++	{
++		DPRINTF (E_ERROR, L_GENERAL,
++				"Failed to rescale large icon image (%s).\n", path);
++		image_free (img);
++		return;
++	}
++
++	if ((img_sm = image_resize (img,
++					xround(img->width*scale_sm),
++					xround(img->height*scale_sm))) == (image_s *)NULL)
++	{
++		DPRINTF (E_ERROR, L_GENERAL,
++				"Failed to rescale small icon image (%s).\n", path);
++		image_free (img);
++		image_free (img_lrg);
++		return;
++	}
++
++	image_free (img);
++
++	for (j = ICON_FIRST; j <= ICON_LAST; j++)
++		newicons.dynamic[j] = 1;
++
++	if ((newicons.size[ICON_PNG_LRG] = image_save_to_png (img_lrg, NULL,
++			&newicons.icon[ICON_PNG_LRG], alpha, 9)) < 0)
++	{
++		DPRINTF (E_ERROR, L_GENERAL,
++				"Failed to create large PNG icon (%s).\n", path);
++		newicons.icon[ICON_PNG_LRG] = icons.icon[ICON_PNG_LRG];
++		newicons.size[ICON_PNG_LRG] = icons.size[ICON_PNG_LRG];
++		newicons.dynamic[ICON_PNG_LRG] = icons.dynamic[ICON_PNG_LRG];
++	}
++
++	if ((newicons.size[ICON_PNG_SM] = image_save_to_png (img_sm, NULL,
++			&newicons.icon[ICON_PNG_SM], alpha, 9)) < 0)
++	{
++		DPRINTF (E_ERROR, L_GENERAL,
++				"Failed to create small PNG icon (%s).\n", path);
++		newicons.icon[ICON_PNG_SM] = icons.icon[ICON_PNG_SM];
++		newicons.size[ICON_PNG_SM] = icons.size[ICON_PNG_SM];
++		newicons.dynamic[ICON_PNG_SM] = icons.dynamic[ICON_PNG_SM];
++	}
++
++	if (alpha)
++	{
++		image_bgcolor_composite (img_lrg, bgcolor, -1);
++		image_bgcolor_composite (img_sm, bgcolor, -1);
++	}
++
++	if (!(newicons.icon[ICON_JPEG_LRG] = image_save_to_jpeg_buf (img_lrg,
++			&newicons.size[ICON_JPEG_LRG])))
++	{
++		DPRINTF (E_ERROR, L_GENERAL,
++				"Failed to create large JPEG icon (%s).\n", path);
++		newicons.icon[ICON_JPEG_LRG] = icons.icon[ICON_JPEG_LRG];
++		newicons.size[ICON_JPEG_LRG] = icons.size[ICON_JPEG_LRG];
++		newicons.dynamic[ICON_JPEG_LRG] = icons.dynamic[ICON_JPEG_LRG];
++	}
++
++	if (!(newicons.icon[ICON_JPEG_SM] = image_save_to_jpeg_buf (img_sm,
++			&newicons.size[ICON_JPEG_SM])))
++	{
++		DPRINTF (E_ERROR, L_GENERAL,
++				"Failed to create small JPEG icon (%s).\n", path);
++		newicons.icon[ICON_JPEG_SM] = icons.icon[ICON_JPEG_SM];
++		newicons.size[ICON_JPEG_SM] = icons.size[ICON_JPEG_SM];
++		newicons.dynamic[ICON_JPEG_SM] = icons.dynamic[ICON_JPEG_SM];
++	}
++
++	image_free (img_sm);
++	image_free (img_lrg);
++	destroy_icons (&icons);
++	icons = newicons;
++}
++#endif	/* HAVE_LIBPNG */
++
+ static int
+ open_db(sqlite3 **sq3)
+ {
+@@ -486,7 +609,7 @@ init(int argc, char **argv)
+ 	int options_flag = 0;
+ 	struct sigaction sa;
+ 	const char * presurl = NULL;
+-	const char * optionsfile = "/etc/minidlna.conf";
++	const char * optionsfile = "/opt/etc/minidlna.conf";
+ 	char mac_str[13];
+ 	char *string, *word;
+ 	char *path;
+@@ -525,6 +648,11 @@ init(int argc, char **argv)
+ 	runtime_vars.max_connections = 50;
+ 	runtime_vars.root_container = NULL;
+ 	runtime_vars.ifaces[0] = NULL;
++	
++#ifdef THUMBNAIL_CREATION
++	runtime_vars.thumb_width = 160;
++	runtime_vars.thumb_quality = 8;
++#endif
+ 
+ 	/* read options file first since
+ 	 * command line arguments have final say */
+@@ -727,6 +855,9 @@ init(int argc, char **argv)
+ 		case MAX_CONNECTIONS:
+ 			runtime_vars.max_connections = atoi(ary_options[i].value);
+ 			break;
++		case SEARCH_LIMIT:
++			search_limit = atoi(ary_options[i].value);
++			break;
+ 		case MERGE_MEDIA_DIRS:
+ 			if (strtobool(ary_options[i].value))
+ 				SETFLAG(MERGE_MEDIA_DIRS_MASK);
+@@ -739,6 +870,58 @@ init(int argc, char **argv)
+ 			if (strcasecmp(ary_options[i].value, "beacon") == 0)
+ 				CLEARFLAG(TIVO_BONJOUR_MASK);
+ 			break;
++#ifdef THUMBNAIL_CREATION
++		case ENABLE_THUMB:
++			if( (strcmp(ary_options[i].value, "yes") == 0) || atoi(ary_options[i].value) )
++				SETFLAG(THUMB_MASK);
++		break;
++		case THUMB_WIDTH:
++			runtime_vars.thumb_width = atoi(ary_options[i].value);
++			if (runtime_vars.thumb_width < 120)
++				runtime_vars.thumb_width = 120;
++			if (runtime_vars.thumb_width > 480)
++				runtime_vars.thumb_width = 480;
++			break;
++		case THUMB_QUALITY:
++			runtime_vars.thumb_quality = atoi(ary_options[i].value);
++			if (runtime_vars.thumb_quality < 5)
++				runtime_vars.thumb_quality = 5;
++			if (runtime_vars.thumb_quality > 30)
++				runtime_vars.thumb_quality = 30;
++		break;
++		case ENABLE_THUMB_FILMSTRIP:
++			if( (strcmp(ary_options[i].value, "yes") == 0) || atoi(ary_options[i].value) )
++				SETFLAG(THUMB_FILMSTRIP);
++		break;
++#endif			
++#ifdef HAVE_LIBPNG
++		case ICON:
++			{
++				char *path = strtok (ary_options[i].value, ",");
++				char *bgcolor_s = strtok (NULL, ",");
++				uint32_t bgcolor = 0x7f7f7f;
++
++				if (bgcolor_s)
++				{
++					if (image_color_from_hex (bgcolor_s, &bgcolor))
++						bgcolor = 0x7f7f7f;
++					else
++						/* lose the alpha */
++						bgcolor >>= 8;
++				}
++
++				set_user_icon_from_png (path, bgcolor);
++			}
++			break;
++		case BGCOLOR:
++			{
++				char *bgcolor1_s = strtok (ary_options[i].value, ",");
++				char *bgcolor2_s = strtok (NULL, ",");
++
++				image_set_png_bgcolor (bgcolor1_s, bgcolor2_s);
++			}
++			break;
++#endif
+ 		default:
+ 			DPRINTF(E_ERROR, L_GENERAL, "Unknown option in file %s\n",
+ 				optionsfile);
+diff -auNp a/minidlna.conf b/minidlna.conf
+--- a/minidlna.conf	2017-05-17 23:55:17.000000000 +0300
++++ b/minidlna.conf	2017-06-29 13:34:09.895771857 +0300
+@@ -86,5 +86,26 @@ model_number=1
+ # note: many clients open several simultaneous connections while streaming
+ #max_connections=50
+ 
++# PNG image to use for an icon, optionally followed by a hex background
++# color
++#icon=myicon.png,7f7f7f
++
++# Background color (hex rgb triplet) for PNG images converted to jpeg.  Two
++# colors indicate that a checkerboard background, in those colors, should
++# be used.
++#bgcolor=666666,999999
++
++# Suport to Movie Thumbnail generation. To use this option, thumbnail generation must be enable at compile time.
++enable_thumbnail=yes
++
++# The width of the thumbnail image. Large images takes more time to generate.  To use this option, thumbnail generation must be enable at compile time.
++thumbnail_width=160
++
++# Thumbnail Image quality. To use this option, thumbnail generation must be enable at compile time.
++thumbnail_quality=8
++
++# Should the thumbnail have a film strip? To use this option, thumbnail generation must be enable at compile time.
++enable_thumbnail_filmstrip=yes
++
+ # set this to yes to allow symlinks that point outside user-defined media_dirs.
+ #wide_links=no
+diff -auNp a/minidlnatypes.h b/minidlnatypes.h
+--- a/minidlnatypes.h	2017-05-17 23:55:17.000000000 +0300
++++ b/minidlnatypes.h	2017-06-29 13:34:21.295854908 +0300
+@@ -51,6 +51,10 @@ struct runtime_vars_s {
+ 	int max_connections;	/* max number of simultaneous conenctions */
+ 	const char *root_container;	/* root ObjectID (instead of "0") */
+ 	const char *ifaces[MAX_LAN_ADDR];	/* list of configured network interfaces */
++#ifdef THUMBNAIL_CREATION
++	int thumb_width;
++	int thumb_quality;
++#endif	
+ };
+ 
+ struct string_s {
+diff -auNp a/options.c b/options.c
+--- a/options.c	2017-05-17 23:55:17.000000000 +0300
++++ b/options.c	2017-06-29 12:55:01.155307000 +0300
+@@ -65,6 +65,19 @@ static const struct {
+ 	{ FORCE_SORT_CRITERIA, "force_sort_criteria" },
+ 	{ MAX_CONNECTIONS, "max_connections" },
+ 	{ MERGE_MEDIA_DIRS, "merge_media_dirs" },
++#ifndef THUMBNAIL_CREATION	
++	{ SEARCH_LIMIT, "search_limit" },
++#else
++	{ SEARCH_LIMIT, "search_limit" },
++	{ ENABLE_THUMB, "enable_thumbnail" },
++	{ THUMB_WIDTH, "thumbnail_width" },
++	{ THUMB_QUALITY, "thumbnail_quality" },
++	{ ENABLE_THUMB_FILMSTRIP, "enable_thumbnail_filmstrip" },
++#endif
++#ifdef HAVE_LIBPNG
++	{ ICON, "icon" },
++	{ BGCOLOR, "bgcolor" },
++#endif
+ 	{ WIDE_LINKS, "wide_links" },
+ 	{ TIVO_DISCOVERY, "tivo_discovery" },
+ };
+diff -auNp a/options.h b/options.h
+--- a/options.h	2017-05-17 23:55:17.000000000 +0300
++++ b/options.h	2017-06-29 12:55:01.155307000 +0300
+@@ -58,6 +58,19 @@ enum upnpconfigoptions {
+ 	FORCE_SORT_CRITERIA,		/* force sorting by a given sort criteria */
+ 	MAX_CONNECTIONS,		/* maximum number of simultaneous connections */
+ 	MERGE_MEDIA_DIRS,		/* don't add an extra directory level when there are multiple media dirs */
++#ifndef THUMBNAIL_CREATION
++	SEARCH_LIMIT, 		        /* limit search object results */
++#else
++	SEARCH_LIMIT, 		        /* limit search object results */
++	ENABLE_THUMB,                   /* enable thumbnail generation */
++	THUMB_WIDTH,                    /* thunbnail image with */
++	THUMB_QUALITY,                  /* thumnail image quality */
++	ENABLE_THUMB_FILMSTRIP,         /* film strip overlay */
++#endif
++#ifdef HAVE_LIBPNG
++	ICON,				/* user-supplied PNG icon */
++	BGCOLOR,			/* user-supplied BG color */
++#endif
+ 	WIDE_LINKS,			/* allow following symlinks outside the defined media_dirs */
+ 	TIVO_DISCOVERY,			/* TiVo discovery protocol: bonjour or beacon. Defaults to bonjour if supported */
+ };
+diff -auNp a/process.c b/process.c
+--- a/process.c	2017-05-17 23:55:17.000000000 +0300
++++ b/process.c	2017-06-29 12:55:01.155307000 +0300
+@@ -27,6 +27,8 @@
+  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+  * POSSIBILITY OF SUCH DAMAGE.
+  */
++#include "config.h"
++
+ #include <sys/types.h>
+ #include <sys/stat.h>
+ #include <unistd.h>
+@@ -40,7 +42,6 @@
+ 
+ #include "upnpglobalvars.h"
+ #include "process.h"
+-#include "config.h"
+ #include "log.h"
+ 
+ struct child *children = NULL;
+@@ -109,8 +110,9 @@ void
+ process_handle_child_termination(int signal)
+ {
+ 	pid_t pid;
++	int status;
+ 
+-	while ((pid = waitpid(-1, NULL, WNOHANG)))
++	while ((pid = waitpid(-1, &status, WNOHANG)))
+ 	{
+ 		if (pid == -1)
+ 		{
+@@ -119,8 +121,29 @@ process_handle_child_termination(int sig
+ 			else
+ 				break;
+ 		}
++
+ 		number_of_children--;
+ 		remove_process_info(pid);
++
++		if (WIFEXITED(status))
++		{
++			DPRINTF(E_DEBUG, L_GENERAL,
++					"Process %d exited normally with exit status %d\n",
++					(int)pid, WEXITSTATUS(status));
++		}
++		else if (WIFSIGNALED(status))
++		{
++#ifdef WCOREDUMP
++			DPRINTF(E_ERROR, L_GENERAL,
++					"Process %d terminated by signal %d.  A core dump was%sproduced.\n",
++					(int)pid, WTERMSIG(status),
++					WCOREDUMP(status) ? " " : " not ");
++#else
++			DPRINTF(E_ERROR, L_GENERAL,
++					"Process %d terminated by signal %d\n",
++					(int)pid, WTERMSIG(status));
++#endif
++		}
+ 	}
+ }
+ 
+diff -auNp a/scanner.c b/scanner.c
+--- a/scanner.c	2017-05-17 23:55:17.000000000 +0300
++++ b/scanner.c	2017-06-29 15:26:52.838540541 +0300
+@@ -15,6 +15,8 @@
+  * You should have received a copy of the GNU General Public License
+  * along with MiniDLNA. If not, see <http://www.gnu.org/licenses/>.
+  */
++#include "config.h"
++
+ #include <stdio.h>
+ #include <string.h>
+ #include <stdlib.h>
+@@ -28,8 +30,6 @@
+ #include <sys/time.h>
+ #include <sys/resource.h>
+ 
+-#include "config.h"
+-
+ #ifdef ENABLE_NLS
+ #include <libintl.h>
+ #endif
+diff -auNp a/testupnpdescgen.c b/testupnpdescgen.c
+--- a/testupnpdescgen.c	2017-05-17 23:55:17.000000000 +0300
++++ b/testupnpdescgen.c	2017-06-29 12:55:01.155307000 +0300
+@@ -26,11 +26,12 @@
+  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+  * POSSIBILITY OF SUCH DAMAGE.
+  */
++#include "config.h"
++
+ #include <stdlib.h>
+ #include <stdio.h>
+ #include <string.h>
+ 
+-#include "config.h"
+ #include "upnpdescgen.h"
+ 
+ char uuidvalue[] = "uuid:12345678-0000-0000-0000-00000000abcd";
+diff -auNp a/upnpdescgen.c b/upnpdescgen.c
+--- a/upnpdescgen.c	2017-05-17 23:55:17.000000000 +0300
++++ b/upnpdescgen.c	2017-06-29 12:55:01.155307000 +0300
+@@ -26,11 +26,12 @@
+  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+  * POSSIBILITY OF SUCH DAMAGE.
+  */
++#include "config.h"
++
+ #include <stdio.h>
+ #include <stdlib.h>
+ #include <string.h>
+ 
+-#include "config.h"
+ #include "getifaddr.h"
+ #include "upnpdescgen.h"
+ #include "minidlnapath.h"
+diff -auNp a/upnpglobalvars.c b/upnpglobalvars.c
+--- a/upnpglobalvars.c	2017-05-17 23:55:17.000000000 +0300
++++ b/upnpglobalvars.c	2017-06-29 14:42:39.886069689 +0300
+@@ -46,12 +46,13 @@
+  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+  * POSSIBILITY OF SUCH DAMAGE.
+  */
++#include "config.h"
++
+ #include <sys/types.h>
+ #include <netinet/in.h>
+ #include <sys/param.h>
+ #include <limits.h>
+ 
+-#include "config.h"
+ #include "upnpglobalvars.h"
+ 
+ /* startup time */
+@@ -60,7 +61,7 @@ time_t startup_time = 0;
+ struct runtime_vars_s runtime_vars;
+ uint32_t runtime_flags = INOTIFY_MASK | TIVO_BONJOUR_MASK;
+ 
+-const char *pidfilename = "/var/run/minidlna/minidlna.pid";
++const char *pidfilename = "/opt/var/minidlna/minidlna.pid";
+ 
+ char uuidvalue[] = "uuid:00000000-0000-0000-0000-000000000000";
+ char modelname[MODELNAME_MAX_LEN] = ROOTDEV_MODELNAME;
+@@ -76,7 +77,7 @@ struct lan_addr_s lan_addr[MAX_LAN_ADDR]
+ int sssdp = -1;
+ 
+ /* Path of the Unix socket used to communicate with MiniSSDPd */
+-const char * minissdpdsocketpath = "/var/run/minissdpd.sock";
++const char * minissdpdsocketpath = "/opt/var/minidlna/minissdpd.sock";
+ 
+ /* UPnP-A/V [DLNA] */
+ sqlite3 *db;
+@@ -90,3 +91,4 @@ volatile short int quitting = 0;
+ volatile uint32_t updateID = 0;
+ const char *force_sort_criteria = NULL;
+ short int rescan_db = 0;
++int search_limit = -1;
+diff -auNp a/upnpglobalvars.h b/upnpglobalvars.h
+--- a/upnpglobalvars.h	2017-05-17 23:55:17.000000000 +0300
++++ b/upnpglobalvars.h	2017-06-29 14:42:48.510144316 +0300
+@@ -193,6 +193,10 @@ extern uint32_t runtime_flags;
+ #else
+ #define TIVO_BONJOUR_MASK     0x0000
+ #endif
++#ifdef THUMBNAIL_CREATION
++#define THUMB_MASK            0x0100
++#define THUMB_FILMSTRIP       0x0200
++#endif
+ 
+ #define SETFLAG(mask)	runtime_flags |= mask
+ #define GETFLAG(mask)	(runtime_flags & mask)
+@@ -234,5 +238,6 @@ extern volatile short int quitting;
+ extern volatile uint32_t updateID;
+ extern const char *force_sort_criteria;
+ extern short int rescan_db;
++extern int search_limit;
+ 
+ #endif
+diff -auNp a/upnphttp.c b/upnphttp.c
+--- a/upnphttp.c	2017-05-17 23:55:17.000000000 +0300
++++ b/upnphttp.c	2017-06-29 12:55:01.155307000 +0300
+@@ -46,6 +46,8 @@
+  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+  * POSSIBILITY OF SUCH DAMAGE.
+  */
++#include "config.h"
++
+ #include <stdlib.h>
+ #include <unistd.h>
+ #include <stdio.h>
+@@ -63,7 +65,6 @@
+ #include <sys/resource.h>
+ #include <limits.h>
+ 
+-#include "config.h"
+ #include "upnpglobalvars.h"
+ #include "upnphttp.h"
+ #include "upnpdescgen.h"
+@@ -81,14 +82,13 @@
+ #include "clients.h"
+ #include "process.h"
+ #include "sendfile.h"
++#include "icons.h"
+ 
+ #define MAX_BUFFER_SIZE 2147483647
+ #define MIN_BUFFER_SIZE 65536
+ 
+ #define INIT_STR(s, d) { s.data = d; s.size = sizeof(d); s.off = 0; }
+ 
+-#include "icons.c"
+-
+ enum event_type {
+ 	E_INVALID,
+ 	E_SUBSCRIBE,
+@@ -1389,29 +1389,29 @@ SendResp_icon(struct upnphttp * h, char
+ 	if( strcmp(icon, "sm.png") == 0 )
+ 	{
+ 		DPRINTF(E_DEBUG, L_HTTP, "Sending small PNG icon\n");
+-		data = (char *)png_sm;
+-		size = sizeof(png_sm)-1;
++		data = (char *)icons.icon[ICON_PNG_SM];
++		size = icons.size[ICON_PNG_SM];
+ 		strcpy(mime+6, "png");
+ 	}
+ 	else if( strcmp(icon, "lrg.png") == 0 )
+ 	{
+ 		DPRINTF(E_DEBUG, L_HTTP, "Sending large PNG icon\n");
+-		data = (char *)png_lrg;
+-		size = sizeof(png_lrg)-1;
++		data = (char *)icons.icon[ICON_PNG_LRG];
++		size = icons.size[ICON_PNG_LRG];
+ 		strcpy(mime+6, "png");
+ 	}
+ 	else if( strcmp(icon, "sm.jpg") == 0 )
+ 	{
+ 		DPRINTF(E_DEBUG, L_HTTP, "Sending small JPEG icon\n");
+-		data = (char *)jpeg_sm;
+-		size = sizeof(jpeg_sm)-1;
++		data = (char *)icons.icon[ICON_JPEG_SM];
++		size = icons.size[ICON_JPEG_SM];
+ 		strcpy(mime+6, "jpeg");
+ 	}
+ 	else if( strcmp(icon, "lrg.jpg") == 0 )
+ 	{
+ 		DPRINTF(E_DEBUG, L_HTTP, "Sending large JPEG icon\n");
+-		data = (char *)jpeg_lrg;
+-		size = sizeof(jpeg_lrg)-1;
++		data = (char *)icons.icon[ICON_JPEG_LRG];
++		size = icons.size[ICON_JPEG_LRG];
+ 		strcpy(mime+6, "jpeg");
+ 	}
+ 	else
+@@ -1628,8 +1628,10 @@ SendResp_resizedimg(struct upnphttp * h,
+ 	int scale = 1;
+ 	const char *tmode;
+ 
++	int png = 0, alpha;
++
+ 	id = strtoll(object, &saveptr, 10);
+-	snprintf(buf, sizeof(buf), "SELECT PATH, RESOLUTION, ROTATION from DETAILS where ID = '%lld'", (long long)id);
++	snprintf(buf, sizeof(buf), "SELECT PATH, RESOLUTION, ROTATION, MIME from DETAILS where ID = '%lld'", (long long)id);
+ 	ret = sql_get_table(db, buf, &result, &rows, NULL);
+ 	if( ret != SQLITE_OK )
+ 	{
+@@ -1638,9 +1640,9 @@ SendResp_resizedimg(struct upnphttp * h,
+ 	}
+ 	if( rows )
+ 	{
+-		file_path = result[3];
+-		resolution = result[4];
+-		rotate = result[5] ? atoi(result[5]) : 0;
++		file_path = result[4];
++		resolution = result[5];
++		rotate = result[6] ? atoi(result[6]) : 0;
+ 	}
+ 	if( !file_path || !resolution || (access(file_path, F_OK) != 0) )
+ 	{
+@@ -1650,6 +1652,20 @@ SendResp_resizedimg(struct upnphttp * h,
+ 		return;
+ 	}
+ 
++	png = (strncmp (result[7], "image/png", 9) == 0);
++
++#ifndef HAVE_LIBPNG
++	if (png)
++	{
++		DPRINTF(E_MAXDEBUG, L_HTTP,
++				"%s (%s): Not supported for PNG, responding ERROR 404\n",
++				object, file_path);
++		sqlite3_free_table(result);
++		Send404(h);
++		return;
++	}
++#endif
++
+ 	if( saveptr )
+ 		saveptr = strchr(saveptr, '?');
+ 	path = saveptr ? saveptr + 1 : object;
+@@ -1773,7 +1789,12 @@ SendResp_resizedimg(struct upnphttp * h,
+ 	if( strcmp(h->HttpVer, "HTTP/1.0") == 0 )
+ 	{
+ 		chunked = 0;
+-		imsrc = image_new_from_jpeg(file_path, 1, NULL, 0, scale, rotate);
++		imsrc =
++#ifdef HAVE_LIBPNG
++			png ? image_new_from_png(file_path, 1, NULL, 0, scale, rotate,
++					&alpha) :
++#endif
++			image_new_from_jpeg(file_path, 1, NULL, 0, scale, rotate);
+ 	}
+ 	else
+ 	{
+@@ -1791,6 +1812,10 @@ SendResp_resizedimg(struct upnphttp * h,
+ 		}
+ 
+ 		imdst = image_resize(imsrc, dstw, dsth);
++#ifdef HAVE_LIBPNG
++		if (png && alpha)
++			image_png_composite (imdst);
++#endif
+ 		data = image_save_to_jpeg_buf(imdst, &size);
+ 
+ 		strcatf(&str, "Content-Length: %d\r\n\r\n", size);
+@@ -1800,7 +1825,12 @@ SendResp_resizedimg(struct upnphttp * h,
+ 	{
+ 		if( chunked )
+ 		{
+-			imsrc = image_new_from_jpeg(file_path, 1, NULL, 0, scale, rotate);
++			imsrc =
++#ifdef HAVE_LIBPNG
++				png ? image_new_from_png(file_path, 1, NULL, 0, scale, rotate,
++						&alpha) :
++#endif
++				image_new_from_jpeg(file_path, 1, NULL, 0, scale, rotate);
+ 			if( !imsrc )
+ 			{
+ 				DPRINTF(E_WARN, L_HTTP, "Unable to open image %s!\n", file_path);
+@@ -1808,6 +1838,10 @@ SendResp_resizedimg(struct upnphttp * h,
+ 				goto resized_error;
+ 			}
+ 			imdst = image_resize(imsrc, dstw, dsth);
++#ifdef HAVE_LIBPNG
++			if (png && alpha)
++				image_png_composite (imdst);
++#endif
+ 			data = image_save_to_jpeg_buf(imdst, &size);
+ 
+ 			ret = sprintf(buf, "%x\r\n", size);
+diff -auNp a/upnpsoap.c b/upnpsoap.c
+--- a/upnpsoap.c	2017-06-29 15:28:16.551131271 +0300
++++ b/upnpsoap.c	2017-06-29 13:58:26.502927184 +0300
+@@ -1134,7 +1134,11 @@ callback(void *args, int argc, char **ar
+ 			if( *mime == 'v' && (passed_args->filter & FILTER_RES) && !(passed_args->flags & FLAG_MS_PFS) ) {
+ 				ret = strcatf(str, "&lt;res protocolInfo=\"http-get:*:image/jpeg:DLNA.ORG_PN=JPEG_TN\"&gt;"
+ 				                   "http://%s:%d/AlbumArt/%s-%s.jpg"
++				                   "&lt;/res&gt;\n\n"
++						   "&lt;res protocolInfo=\"http-get:*:image/jpeg:DLNA.ORG_PN=JPEG_SM\"&gt;"
++				                   "http://%s:%d/AlbumArt/%s-%s.jpg"
+ 				                   "&lt;/res&gt;",
++				                   lan_addr[passed_args->iface].str, runtime_vars.port, album_art, detailID,
+ 				                   lan_addr[passed_args->iface].str, runtime_vars.port, album_art, detailID);
+ 			} else if( passed_args->filter & FILTER_UPNP_ALBUMARTURI ) {
+ 				ret = strcatf(str, "&lt;upnp:albumArtURI");
+@@ -1833,6 +1837,15 @@ SearchContentDirectory(struct upnphttp *
+ 			goto search_error;
+ 		}
+ 	}
++        /* Search limit check */
++	if (search_limit >= 0) 
++	{
++         if (totalMatches > search_limit)
++          totalMatches = search_limit;
++
++         if ((StartingIndex + RequestedCount) > search_limit)
++          RequestedCount = search_limit - StartingIndex;
++        }
+ 	ret = 0;
+ 	__SORT_LIMIT
+ 	orderBy = parse_sort_criteria(SortCriteria, &ret);
+diff -auNp a/utils.c b/utils.c
+--- a/utils.c	2017-05-17 23:55:17.000000000 +0300
++++ b/utils.c	2017-06-29 13:52:01.727789938 +0300
+@@ -343,8 +343,15 @@ mime_to_ext(const char * mime)
+ 				return "pcm";
+ 			else if( strcmp(mime+6, "3gpp") == 0 )
+ 				return "3gp";
+-			else if( strcmp(mime, "application/ogg") == 0 )
+-				return "ogg";
++			else if( strncmp(mime+6, "ogg", 3) == 0 )
++			{
++				if( strstr(mime+9, "opus" ) != (char *)NULL )
++					return "opus";
++				else if( strstr (mime+9, "vorbis" ) != (char *)NULL )
++					return "ogg";
++
++				return "oga";
++			}
+ 			break;
+ 		case 'v':
+ 			if( strcmp(mime+6, "avi") == 0 )
+@@ -373,6 +380,8 @@ mime_to_ext(const char * mime)
+ 				return "3gp";
+ 			else if( strncmp(mime+6, "x-tivo-mpeg", 11) == 0 )
+ 				return "TiVo";
++			else if ( strcmp(mime+6, "ogg") == 0 )
++				return "ogv";
+ 			break;
+ 		case 'i':
+ 			if( strcmp(mime+6, "jpeg") == 0 )
+@@ -397,6 +406,7 @@ is_video(const char * file)
+ 		ends_with(file, ".m2t") || ends_with(file, ".mkv")   ||
+ 		ends_with(file, ".vob") || ends_with(file, ".ts")    ||
+ 		ends_with(file, ".flv") || ends_with(file, ".xvid")  ||
++		ends_with(file, ".ogv") ||
+ #ifdef TIVO_SUPPORT
+ 		ends_with(file, ".TiVo") ||
+ #endif
+@@ -412,13 +422,18 @@ is_audio(const char * file)
+ 		ends_with(file, ".m4a") || ends_with(file, ".aac")  ||
+ 		ends_with(file, ".mp4") || ends_with(file, ".m4p")  ||
+ 		ends_with(file, ".wav") || ends_with(file, ".ogg")  ||
++		ends_with(file, ".oga") ||
++#ifdef HAVE_OPUS
++		ends_with(file, ".opus") ||
++#endif
+ 		ends_with(file, ".pcm") || ends_with(file, ".3gp"));
+ }
+ 
+ int
+ is_image(const char * file)
+ {
+-	return (ends_with(file, ".jpg") || ends_with(file, ".jpeg"));
++	return (ends_with(file, ".jpg") || ends_with(file, ".jpeg") ||
++		ends_with(file, ".png"));
+ }
+ 
+ int
+@@ -517,3 +532,16 @@ resolve_unknown_type(const char * path,
+ 	return type;
+ }
+ 
++#ifdef THUMBNAIL_CREATION
++int
++rename_artcache_dir(const char * oldpath, const char * newpath)
++{
++	char old_artcache[PATH_MAX];
++	char new_artcache[PATH_MAX];
++
++	snprintf(old_artcache, sizeof(old_artcache), "%s/art_cache%s", db_path, oldpath);
++	snprintf(new_artcache, sizeof(old_artcache), "%s/art_cache%s", db_path, newpath);
++
++	return rename(old_artcache, new_artcache);
++}
++#endif
+diff -auNp a/utils.h b/utils.h
+--- a/utils.h	2017-05-17 23:55:17.000000000 +0300
++++ b/utils.h	2017-06-29 13:52:19.391925359 +0300
+@@ -96,5 +96,8 @@ const char *mime_to_ext(const char * mim
+ /* Others */
+ int make_dir(char * path, mode_t mode);
+ unsigned int DJBHash(uint8_t *data, int len);
++#ifdef THUMBNAIL_CREATION
++int rename_artcache_dir(const char * oldpath, const char * newpath);
++#endif
+ 
+ #endif
