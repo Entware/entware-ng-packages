@@ -1,0 +1,16 @@
+--- a/src/dns/dns_lookup.c
++++ b/src/dns/dns_lookup.c
+@@ -344,11 +344,13 @@
+ 	if (msg_verbose)
+ 	    msg_info("res_mkquery() failed");
+ 	return (len);
++#if !defined(__UCLIBC__)
+     } else if ((len = res_send(msg_buf, len, answer, anslen)) < 0) {
+ 	SET_H_ERRNO(TRY_AGAIN);
+ 	if (msg_verbose)
+ 	    msg_info("res_send() failed");
+ 	return (len);
++#endif
+     } else {
+ 	switch (reply_header->rcode) {
+ 	case NXDOMAIN:
