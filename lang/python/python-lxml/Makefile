@@ -38,7 +38,7 @@ endef
 define Package/python-lxml
 $(call Package/python-lxml/Default)
   TITLE:=python-lxml
-  DEPENDS+=+PACKAGE_python-lxml:python-light +PACKAGE_python-lxml:python-codecs
+  DEPENDS+=+PACKAGE_python-lxml:python-light +PACKAGE_python-lxml:python-codecs +USE_UCLIBC:librt
   VARIANT:=python
 endef
 
