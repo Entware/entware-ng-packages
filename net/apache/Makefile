@@ -40,7 +40,7 @@ endef
 
 define Package/apache
 $(call Package/apache/Default)
-  DEPENDS:=+libapr +libaprutil +libpcre +libopenssl +unixodbc +zlib
+  DEPENDS:=+libapr +libaprutil +libpcre +libopenssl +unixodbc +zlib +libxml2
 endef
 
 define Package/apache/description
@@ -77,6 +77,9 @@ $(call Package/apache/Default/description)
  .
  This package contains the icons from Apache.
 endef
+
+CONFIGURE_VARS += \
+	ac_cv_gcc__std_c89=no
 
 TARGET_CFLAGS += $(FPIC)
 TARGET_CPPFLAGS += -D_LARGEFILE64_SOURCE -D_FILE_OFFSET_BITS=64 -D_GNU_SOURCE
