@@ -114,6 +114,7 @@ define Build/Configure
 			--enable-target-optspace \
 			--with-gnu-ld \
 			--with-stage1-ldflags="-Wl,-rpath=/opt/lib -Wl,--dynamic-linker=/opt/lib/$(DYNLINKER)" \
+			--with-specs="-Wl,-rpath=/opt/lib -Wl,--dynamic-linker=/opt/lib/$(DYNLINKER)" \
 			--with-boot-ldflags="static-libstdc++ -static-libgcc -Wl,-rpath=/opt/lib -Wl,--dynamic-linker=/opt/lib/$(DYNLINKER)" \
 			--disable-nls \
 			--disable-libsanitizer \
