@@ -21,11 +21,14 @@ PKG_INSTALL:=1
 
 include $(INCLUDE_DIR)/package.mk
 
+TARGET_LDFLAGS+= -lrt
+
 define Package/m4
   SECTION:=devel
   CATEGORY:=Development
   TITLE:=m4
   URL:=https://www.gnu.org/software/m4/
+  DEPENDS:=+librt
 endef
 
 define Package/m4/description
