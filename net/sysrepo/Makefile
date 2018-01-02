@@ -11,17 +11,18 @@ PKG_LICENSE:=ASL-2.0
 PKG_MAINTAINER:=Mislav Novakovic <mislav.novakovic@sartura.hr>
 
 PKG_NAME:=sysrepo
-PKG_VERSION:=0.6.0
+PKG_VERSION:=0.7.2
 PKG_RELEASE:=2
 
 PKG_SOURCE_PROTO:=git
-PKG_SOURCE_VERSION:=e4a5705a4c5293ba121048c71899b98243d99edf
-PKG_MIRROR_HASH:=aa0fb5d7c947dd428d9f573c84edf6237c8c1a4db92dcd4d7552a68d25277a39
-PKG_SOURCE:=$(PKG_NAME)-$(PKG_SOURCE_VERSION).tar.bz2
+PKG_SOURCE_VERSION:=8a188c515ad113adbe0d393fe54dc0cad2d0167a
+PKG_MIRROR_HASH:=b8a387a6ee6692c455815226f27a572984d997ce0c0c85ac0d15a81e8e9c62a3
+PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION)-$(PKG_SOURCE_VERSION).tar.xz
 PKG_SOURCE_URL:=https://github.com/sysrepo/sysrepo.git
-PKG_SOURCE_SUBDIR:=$(PKG_NAME)-$(PKG_SOURCE_VERSION)
+PKG_SOURCE_SUBDIR:=$(PKG_NAME)-$(PKG_VERSION)-$(PKG_SOURCE_VERSION)
 
-PKG_BUILD_DIR:=$(BUILD_DIR)/$(PKG_SOURCE_SUBDIR)
+PKG_BUILD_ROOT:=$(BUILD_DIR)/$(PKG_SOURCE_SUBDIR)
+PKG_BUILD_DIR:=$(PKG_BUILD_ROOT)
 
 CMAKE_INSTALL:=1
 
@@ -36,7 +37,7 @@ define Package/libsysrepo
   CATEGORY:=Utilities
   URL:=$(PKG_SOURCE_URL)
   TITLE:=YANG-based data store library
-  DEPENDS:=+libyang +libprotobuf-c +libev +libavl
+  DEPENDS:=+libyang +libprotobuf-c +libev +libredblack +librt
 endef
 
 define Package/sysrepo
@@ -69,6 +70,7 @@ endef
 
 CMAKE_OPTIONS += \
 	-DCMAKE_BUILD_TYPE:STRING=Release \
+	-DUSE_AVL_LIB:BOOL=FALSE \
 	-DENABLE_TESTS:BOOL=FALSE \
 	-DBUILD_EXAMPLES:BOOL=FALSE \
 	-DCMAKE_DISABLE_FIND_PACKAGE_SWIG=TRUE \
@@ -94,11 +96,11 @@ define Package/libsysrepo/install
 	$(INSTALL_CONF) $(PKG_BUILD_DIR)/yang/sysrepo-persistent-data.yang $(1)/etc/sysrepo/yang/internal
 
 	$(INSTALL_DIR) $(1)/etc/sysrepo/yang
-	$(INSTALL_DATA) $(PKG_BUILD_DIR)/yang/ietf-netconf-acm@2012-02-22.yang $(1)/etc/sysrepo/yang/
-	$(INSTALL_DATA) $(PKG_BUILD_DIR)/yang/ietf-netconf-notifications.yang $(1)/etc/sysrepo/yang/
-	$(INSTALL_DATA) $(PKG_BUILD_DIR)/yang/nc-notifications.yang $(1)/etc/sysrepo/yang/
-	$(INSTALL_DATA) $(PKG_BUILD_DIR)/yang/notifications.yang $(1)/etc/sysrepo/yang/
-	$(INSTALL_DATA) $(PKG_BUILD_DIR)/yang/ietf-netconf@2011-06-01.yang $(1)/etc/sysrepo/yang/
+	$(INSTALL_DATA) $(PKG_BUILD_DIR)/yang/ietf-netconf-acm@2012-02-22.yang $(1)/etc/sysrepo/yang/ietf-netconf-acm@2012-02-22.yang
+	$(INSTALL_DATA) $(PKG_BUILD_DIR)/yang/ietf-netconf-notifications.yang $(1)/etc/sysrepo/yang/ietf-netconf-notifications@2012-02-06..yang
+	$(INSTALL_DATA) $(PKG_BUILD_DIR)/yang/nc-notifications.yang $(1)/etc/sysrepo/yang/nc-notifications@2008-07-14.yang
+	$(INSTALL_DATA) $(PKG_BUILD_DIR)/yang/notifications.yang $(1)/etc/sysrepo/yang/notifications@2008-07-14.yang
+	$(INSTALL_DATA) $(PKG_BUILD_DIR)/yang/ietf-netconf@2011-06-01.yang $(1)/etc/sysrepo/yang/ietf-netconf@2011-06-01.yang
 
 	$(INSTALL_DIR) $(1)/etc/sysrepo/data/internal
 	$(INSTALL_DIR) $(1)/etc/sysrepo/data/notifications
