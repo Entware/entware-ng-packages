@@ -8,17 +8,17 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=libndpi
-PKG_VERSION:=1.8
+PKG_VERSION:=2.2
 PKG_RELEASE:=1
 PKG_MAINTAINER:=Banglang Huang <banglang.huang@foxmail.com>
 
 PKG_SOURCE_PROTO:=git
 PKG_SOURCE_URL:=https://github.com/ntop/nDPI.git
-PKG_SOURCE_VERSION:=6450ae256cfd7a6006d39df4a29de32f2f6fb7eb
+PKG_SOURCE_VERSION:=56dcf659de5de5385406068704a89c6a39e34041
 
 PKG_SOURCE_SUBDIR:=$(PKG_NAME)-$(PKG_VERSION)
-PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.gz
-PKG_MIRROR_HASH:=4e8fe352bd739c76c980f52904a4a2eefbc17ad68e55603c6c19598d7ccfba3c
+PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.xz
+PKG_MIRROR_HASH:=425f48e21295d4b522d0190181bd5943ae0664c20a3aa47f3c62611dd4c7b93f
 PKG_LICENSE:=LGPLv3
 
 PKG_INSTALL:=1
@@ -47,7 +47,7 @@ endef
 define Build/InstallDev
 	$(INSTALL_DIR) $(1)/usr/include/
 	$(CP) \
-		$(PKG_INSTALL_DIR)/usr/include/libndpi-1.8.0/libndpi \
+		$(PKG_INSTALL_DIR)/usr/include/libndpi-$(PKG_VERSION).0/libndpi \
 		$(1)/usr/include/
 
 	$(INSTALL_DIR) $(1)/usr/lib
