@@ -1,8 +1,8 @@
-commit 5edc198f37e4b05a27644384001196f87ff6661f
-Merge: 3c6b5c77 73dbc6cf
+commit 8c69bc44364441157ecf61707bc7ce4c74ea4746
+Merge: c4e270e 764fdfd
 Author: champtar <champetier.etienne@gmail.com>
-Date:   Fri Sep 15 10:29:48 2017 -0700
+Date:   Sat Dec 23 15:29:21 2017 -0800
 
-    Merge pull request #4630 from marcin1j/pr/20170725-htpdate-init-scripts
+    Merge pull request #5061 from mrkiko/hostside-luarocks
     
-    htpdate: modify init scripts to use procd and uci configuration
+    luarocks: Allow building luarocks for the host

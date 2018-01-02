@@ -1,6 +1,4 @@
 #
-# Copyright (C) 2006-2016 OpenWrt.org
-#
 # This is free software, licensed under the GNU General Public License v2.
 # See /LICENSE for more information.
 #
@@ -8,13 +6,14 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=unrar
-PKG_VERSION:=5.4.5
+PKG_VERSION:=5.5.8
 PKG_RELEASE:=1
 
 PKG_SOURCE:=unrarsrc-$(PKG_VERSION).tar.gz
 PKG_SOURCE_URL:=http://www.rarlab.com/rar
-PKG_HASH:=e470c584332422893fb52e049f2cbd99e24dc6c6da971008b4e2ae4284f8796c
-PKG_MAINTAINER:=Álvaro Fernández Rojas <noltari@gmail.com>
+PKG_HASH:=9b66e4353a9944bc140eb2a919ff99482dd548f858f5e296d809e8f7cdb2fcf4
+PKG_MAINTAINER:=Álvaro Fernández Rojas <noltari@gmail.com>, \
+		Ted Hess <thess@kitschensync.net>
 
 PKG_LICENSE:=UnRAR
 PKG_LICENSE_FILES:=license.txt
@@ -22,14 +21,14 @@ PKG_LICENSE_FILES:=license.txt
 PKG_BUILD_DIR:=$(BUILD_DIR)/$(PKG_NAME)-$(PKG_VERSION)-$(BUILD_VARIANT)/unrar
 PKG_INSTALL:=1
 
-include $(INCLUDE_DIR)/uclibc++.mk
+#include $(INCLUDE_DIR)/uclibc++.mk
 include $(INCLUDE_DIR)/package.mk
 
 define Package/unrar/Default
   TITLE:=UnRAR
   SUBMENU:=Compression
   URL:=http://www.rarlab.com/
-  DEPENDS:=$(CXX_DEPENDS) +libpthread
+  DEPENDS:=+libstdcpp +libpthread
 endef
 
 define Package/unrar
@@ -58,9 +57,11 @@ define Package/libunrar/description
   archives
 endef
 
+MAKE_FLAGS += \
+	LDFLAGS="$(TARGET_LDFLAGS) -lpthread"
+
 ifeq ($(BUILD_VARIANT),lib)
 define Build/Compile
-	$(call Build/Compile/Default,unrar)
 	$(call Build/Compile/Default,lib)
 endef
 
@@ -91,7 +92,7 @@ endef
 
 define Package/libunrar/install
 	$(INSTALL_DIR) $(1)/opt/lib
-	$(CP) $(PKG_BUILD_DIR)/libunrar.so $(1)/opt/lib/
+	$(CP) $(PKG_INSTALL_DIR)/lib/libunrar.so $(1)/opt/lib/
 endef
 
 $(eval $(call BuildPackage,unrar))
