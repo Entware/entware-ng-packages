@@ -54,7 +54,7 @@ CONFIGURE_ARGS += --disable-o_direct
 
 define Build/Compile
 	$(MAKE) -C $(PKG_BUILD_DIR) \
-		CFLAGS="$(TARGET_CFLAGS) $(TARGET_CPPFLAGS) $(TARGET_LDFLAGS) $(FPIC)" \
+		CFLAGS="-std=gnu99 $(TARGET_CFLAGS) $(TARGET_CPPFLAGS) $(TARGET_LDFLAGS) $(FPIC)" \
 		LIBS="-L$(STAGING_DIR)/opt/lib -luuid -lm" \
 		DESTDIR="$(PKG_INSTALL_DIR)" \
 		install
