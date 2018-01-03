@@ -156,7 +156,10 @@ CONFIGURE_ARGS += \
 	--enable-tcp \
 	--disable-sndio \
 	--disable-haiku \
-	--disable-soundcloud
+	--disable-soundcloud \
+	--disable-epoll \
+	--disable-signalfd \
+	--disable-eventfd
 
 
 ifeq ($(BUILD_VARIANT),full)
