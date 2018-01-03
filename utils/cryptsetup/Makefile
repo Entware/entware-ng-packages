@@ -61,6 +61,9 @@ $(call Package/cryptsetup/Default/description)
 linked against openssl
 endef
 
+CONFIGURE_ARGS+= \
+	--disable-kernel_crypto
+
 ifeq ($(BUILD_VARIANT),openssl)
 CONFIGURE_ARGS+= \
         --with-crypto_backend=openssl
