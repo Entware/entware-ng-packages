@@ -483,7 +483,7 @@ CONFIGURE_ARGS += \
 	--with-dev \
 	--$(if $(CONFIG_NUT_DRIVER_USB),with,without)-usb \
 	--without-avahi \
-	--$(if $(CONFIG_NUT_DRIVER_SNMP),with,without)-snmp $(if $(CONFIG_NUT_DRIVER_SNMP),--with-snmp-libs="$(TARGET_LDFAGS) -lnetsnmp") \
+	--$(if $(CONFIG_NUT_DRIVER_SNMP),with,without)-snmp $(if $(CONFIG_NUT_DRIVER_SNMP),--with-snmp-libs="$(TARGET_LDFLAGS) -lnetsnmp") \
 	--$(if $(CONFIG_NUT_DRIVER_SERIAL),with,without)-serial \
 	--without-neon \
 	--without-powerman \
