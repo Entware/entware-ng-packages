@@ -79,10 +79,10 @@ CONFIGURE_ARGS += \
 define Build/InstallDev
 	$(INSTALL_DIR) $(1)/opt/include
 	$(CP) $(PKG_INSTALL_DIR)/opt/include \
-		$(1)/opt/include
+		$(1)/opt
 	$(INSTALL_DIR) $(1)/opt/lib
 	$(CP) $(PKG_INSTALL_DIR)/opt/lib \
-		$(1)/opt/lib
+		$(1)/opt
 endef
 
 define Package/krb5-libs/install
@@ -110,7 +110,7 @@ endef
 # Removed some server-side software to reduce package size. This should be
 # put in a separate package if needed.
 define Package/krb5-server/install
-	$(INSTALL_DIR) $(1)/opt/etc/init.d
+#	$(INSTALL_DIR) $(1)/opt/etc/init.d
 #	$(INSTALL_BIN) ./files/krb5kdc $(1)/opt/etc/init.d/krb5kdc
 #	$(INSTALL_DIR) $(1)/opt/bin
 #	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/opt/bin/sclient $(1)/opt/bin
