@@ -8,7 +8,7 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=postfix
-PKG_RELEASE:=1
+PKG_RELEASE:=1a
 PKG_VERSION:=3.2.4
 PKG_SOURCE_URL:= \
 	https://cdn.postfix.johnriley.me/mirrors/postfix-release/official/ \
@@ -100,8 +100,10 @@ define Package/postfix/config
 	endmenu
 endef
 
-CCARGS=-DNO_NIS
-AUXLIBS=-L$(STAGING_DIR)/opt/lib -lresolv
+CCARGS=-DNO_NIS -I$(STAGING_DIR)/opt/include
+AUXLIBS=$(TARGET_LDFLAGS)
+AUXLIBS+=-lresolv
+
 
 ifdef CONFIG_POSTFIX_TLS
   CCARGS+=-DUSE_TLS
